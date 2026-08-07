@@ -26,7 +26,6 @@ export default async function AdminPage() {
 
   return (
     <AdminClient
-      user={user}
       partners={partners ?? []}
       projects={projects ?? []}
       announcements={announcements ?? []}

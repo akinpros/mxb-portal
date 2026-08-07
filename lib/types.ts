@@ -36,6 +36,7 @@ export type Reward = {
   cost_points: number
   slots: number | null
   contribution_range: string | null
+  real_cost_eur: number | null
   is_active: boolean
 }
 
