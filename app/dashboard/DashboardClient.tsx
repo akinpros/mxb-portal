@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Partner, Message, Reward, RedemptionRequest, PipelineFilm } from '@/lib/types'
+import type { Partner, Message, Reward, RedemptionRequest, PipelineFilm, Announcement } from '@/lib/types'
 
 const G = '#D4AF37'
 const CH = '#E8D5C4'
@@ -10,23 +10,32 @@ const BG = '#0B0B0B'
 const PANEL = '#161616'
 const LINE = '#2c2c2c'
 
-type Tab = 'overview' | 'rewards' | 'messages' | 'pipeline' | 'benefits'
+type Tab = 'overview' | 'rewards' | 'messages' | 'pipeline' | 'benefits' | 'announcements'
 
 interface Props {
   user: { id: string; email?: string }
+  isAdmin: boolean
   partner: Partner | null
   messages: Message[]
   rewards: Reward[]
   redemptions: RedemptionRequest[]
+  announcements: Announcement[]
   pipeline: PipelineFilm[]
 }
 
-export default function DashboardClient({ user, partner, messages, rewards, redemptions, pipeline }: Props) {
+export default function DashboardClient({ user, isAdmin, partner, messages, rewards, redemptions, announcements, pipeline }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
   const [msgBody, setMsgBody] = useState('')
   const [msgSubject, setMsgSubject] = useState('')
   const [sending, setSending] = useState(false)
   const [msgSent, setMsgSent] = useState(false)
+  const [annTitle, setAnnTitle] = useState('')
+  const [annBody, setAnnBody] = useState('')
+  const [annCategory, setAnnCategory] = useState('general')
+  const [annPinned, setAnnPinned] = useState(false)
+  const [annPosting, setAnnPosting] = useState(false)
+  const [annPosted, setAnnPosted] = useState(false)
+  const [localAnnouncements, setLocalAnnouncements] = useState<Announcement[]>(announcements)
   const router = useRouter()
   const supabase = createClient()
 
@@ -54,6 +63,32 @@ export default function DashboardClient({ user, partner, messages, rewards, rede
     setSending(false)
     setTimeout(() => setMsgSent(false), 3000)
     router.refresh()
+  }
+
+  async function postAnnouncement(e: React.FormEvent) {
+    e.preventDefault()
+    if (!annTitle.trim() || !annBody.trim()) return
+    setAnnPosting(true)
+    const { data } = await supabase.from('mxb_announcements').insert({
+      title: annTitle,
+      body: annBody,
+      category: annCategory,
+      pinned: annPinned,
+    }).select().single()
+    if (data) {
+      setLocalAnnouncements(prev => [data as Announcement, ...prev].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1
+        if (!a.pinned && b.pinned) return 1
+        return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+      }))
+    }
+    setAnnTitle('')
+    setAnnBody('')
+    setAnnCategory('general')
+    setAnnPinned(false)
+    setAnnPosted(true)
+    setAnnPosting(false)
+    setTimeout(() => setAnnPosted(false), 3000)
   }
 
   async function requestRedemption(rewardId: string) {
@@ -92,7 +127,7 @@ export default function DashboardClient({ user, partner, messages, rewards, rede
       }}>
         <div style={{ fontSize: 14, letterSpacing: '.28em', color: G, fontWeight: 300 }}>MOVIES × BRANDS</div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          {(['overview', 'rewards', 'messages', 'pipeline', 'benefits'] as Tab[]).map(t => (
+          {(['overview', 'rewards', 'messages', 'pipeline', 'benefits', 'announcements'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)} style={navBtnStyle(tab === t)}>
               {t === 'overview' ? 'Inicio' : t === 'rewards' ? 'Recompensas' : t === 'messages' ? `Mensajes${unread ? ` (${unread})` : ''}` : t === 'pipeline' ? 'Oportunidades' : 'Beneficios'}
             </button>
@@ -355,6 +390,78 @@ export default function DashboardClient({ user, partner, messages, rewards, rede
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {tab === 'announcements' && (
+          <div>
+            <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Noticias y Actualizaciones</h2>
+            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Novedades importantes sobre la evolución del proyecto</p>
+
+            {isAdmin && (
+              <div style={{ ...panelStyle, marginBottom: 32, borderColor: G }}>
+                <h4 style={{ fontWeight: 300, fontSize: 16, color: G, marginBottom: 20, letterSpacing: '.15em', textTransform: 'uppercase' }}>Publicar Anuncio</h4>
+                <form onSubmit={postAnnouncement}>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 10, letterSpacing: '.3em', textTransform: 'uppercase', color: CH, marginBottom: 7 }}>Título</label>
+                    <input value={annTitle} onChange={e => setAnnTitle(e.target.value)} required
+                      style={{ width: '100%', padding: '10px 12px', background: '#101010', border: '1px solid #3a3a3a', borderRadius: 6, color: '#fff', fontSize: 14, fontFamily: 'Georgia,serif', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 10, letterSpacing: '.3em', textTransform: 'uppercase', color: CH, marginBottom: 7 }}>Contenido</label>
+                    <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} required rows={5}
+                      style={{ width: '100%', padding: '10px 12px', background: '#101010', border: '1px solid #3a3a3a', borderRadius: 6, color: '#fff', fontSize: 14, fontFamily: 'Georgia,serif', boxSizing: 'border-box', resize: 'vertical' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, marginBottom: 18, flexWrap: 'wrap' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 10, letterSpacing: '.3em', textTransform: 'uppercase', color: CH, marginBottom: 7 }}>Categoría</label>
+                      <select value={annCategory} onChange={e => setAnnCategory(e.target.value)}
+                        style={{ padding: '10px 12px', background: '#101010', border: '1px solid #3a3a3a', borderRadius: 6, color: '#fff', fontSize: 13, fontFamily: 'Georgia,serif' }}>
+                        <option value="general">General</option>
+                        <option value="milestone">Hito</option>
+                        <option value="event">Evento</option>
+                        <option value="update">Actualización</option>
+                        <option value="opportunity">Oportunidad</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 22 }}>
+                      <input type="checkbox" id="pinned" checked={annPinned} onChange={e => setAnnPinned(e.target.checked)}
+                        style={{ width: 16, height: 16, accentColor: G }} />
+                      <label htmlFor="pinned" style={{ fontSize: 13, color: CH, cursor: 'pointer' }}>Fijar arriba</label>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <button type="submit" disabled={annPosting}
+                      style={{ padding: '10px 28px', background: annPosting ? '#555' : G, color: '#0b0b0b', border: 'none', borderRadius: 6, cursor: annPosting ? 'not-allowed' : 'pointer', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', fontFamily: 'Georgia,serif', fontWeight: 600 }}>
+                      {annPosting ? 'Publicando...' : 'Publicar →'}
+                    </button>
+                    {annPosted && <span style={{ color: '#6fcf97', fontSize: 13 }}>✓ Publicado</span>}
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {localAnnouncements.length === 0 ? (
+              <div style={{ ...panelStyle, textAlign: 'center', opacity: .5, padding: 48 }}>
+                <p style={{ fontSize: 15 }}>No hay anuncios todavía.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {localAnnouncements.map(a => (
+                  <div key={a.id} style={{ ...panelStyle, borderLeft: `3px solid ${a.pinned ? G : LINE}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {a.pinned && <span style={{ fontSize: 10, letterSpacing: '.25em', textTransform: 'uppercase', color: G, border: `1px solid ${G}`, padding: '3px 8px', borderRadius: 20 }}>Fijado</span>}
+                        <span style={{ fontSize: 10, letterSpacing: '.25em', textTransform: 'uppercase', color: CH, border: `1px solid ${LINE}`, padding: '3px 8px', borderRadius: 20 }}>{a.category}</span>
+                      </div>
+                      <span style={{ fontSize: 12, opacity: .4 }}>{new Date(a.published_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </div>
+                    <h3 style={{ fontWeight: 300, fontSize: 20, color: G, marginBottom: 10 }}>{a.title}</h3>
+                    <p style={{ fontSize: 14, opacity: .75, lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{a.body}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

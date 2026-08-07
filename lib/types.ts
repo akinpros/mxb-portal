@@ -49,6 +49,16 @@ export type RedemptionRequest = {
   reward?: Reward
 }
 
+export type Announcement = {
+  id: string
+  title: string
+  body: string
+  category: string
+  pinned: boolean
+  published_at: string
+  created_at: string
+}
+
 export type PipelineFilm = {
   id: string
   title: string

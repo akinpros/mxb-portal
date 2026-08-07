@@ -6,6 +6,7 @@ export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  const isAdmin = user.app_metadata?.mxb_role === 'admin'
 
   const { data: partner } = await supabase
     .from('mxb_partners')
@@ -33,6 +34,13 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(10)
 
+  const { data: announcements } = await supabase
+    .from('mxb_announcements')
+    .select('*')
+    .order('pinned', { ascending: false })
+    .order('published_at', { ascending: false })
+    .limit(20)
+
   const { data: pipeline } = await supabase
     .from('mxb_pipeline_films')
     .select('*')
@@ -42,10 +50,12 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       user={user}
+      isAdmin={isAdmin}
       partner={partner}
       messages={messages ?? []}
       rewards={rewards ?? []}
       redemptions={redemptions ?? []}
+      announcements={announcements ?? []}
       pipeline={pipeline ?? []}
     />
   )
