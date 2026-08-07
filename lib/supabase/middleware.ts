@@ -32,6 +32,13 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect logged-in users away from /login
   if (user && pathname === '/login') {
+    const role = user.app_metadata?.mxb_role
+    const dest = role === 'admin' ? '/admin' : '/dashboard'
+    return NextResponse.redirect(new URL(dest, request.url))
+  }
+
+  // Protect /admin from non-admins
+  if (user && pathname.startsWith('/admin') && user.app_metadata?.mxb_role !== 'admin') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
