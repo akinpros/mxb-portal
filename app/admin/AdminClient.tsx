@@ -22,6 +22,7 @@ type Project = {
   synopsis: string | null
   funding_total: number | null
   funding_remaining: number | null
+  funding_pct: number | null
   festival: string | null
   dossier_url: string | null
   status: string
@@ -91,6 +92,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
   const [pfFestival, setPfFestival] = useState('')
   const [pfStatus, setPfStatus] = useState('open')
   const [pfDossier, setPfDossier] = useState('')
+  const [pfFundingPct, setPfFundingPct] = useState('0')
   const [pfAdding, setPfAdding] = useState(false)
 
   // --- Announcement form ---
@@ -156,6 +158,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
       title: pfTitle, genre: pfGenre || null, country: pfCountry || null,
       synopsis: pfSynopsis || null, funding_total: pfFundingTotal ? parseFloat(pfFundingTotal) : null,
       funding_remaining: pfFundingRemaining ? parseFloat(pfFundingRemaining) : null,
+      funding_pct: parseInt(pfFundingPct) || 0,
       festival: pfFestival || null, status: pfStatus,
       dossier_url: pfDossier || null, published_at: new Date().toISOString(),
     }).select().single()
@@ -163,7 +166,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
       setProjects(prev => [data as Project, ...prev])
       setPfTitle(''); setPfGenre(''); setPfCountry(''); setPfSynopsis('')
       setPfFundingTotal(''); setPfFundingRemaining(''); setPfFestival('')
-      setPfStatus('open'); setPfDossier('')
+      setPfStatus('open'); setPfDossier(''); setPfFundingPct('0')
     }
     setPfAdding(false)
   }
@@ -388,9 +391,9 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                   <label style={labelStyle}>Sinopsis (breve)</label>
                   <textarea value={pfSynopsis} onChange={e => setPfSynopsis(e.target.value)} rows={3} placeholder="Descripción del proyecto para los partners…" style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 14 }}>
                   <div>
-                    <label style={labelStyle}>Financiación total (€)</label>
+                    <label style={labelStyle}>Presupuesto total (€)</label>
                     <input type="number" value={pfFundingTotal} onChange={e => setPfFundingTotal(e.target.value)} placeholder="500000" style={inputStyle} />
                   </div>
                   <div>
@@ -398,12 +401,20 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                     <input type="number" value={pfFundingRemaining} onChange={e => setPfFundingRemaining(e.target.value)} placeholder="200000" style={inputStyle} />
                   </div>
                   <div>
+                    <label style={labelStyle}>% Financiación completada</label>
+                    <select value={pfFundingPct} onChange={e => setPfFundingPct(e.target.value)} style={inputStyle}>
+                      {[0,10,20,30,40,50,60,70,80,90,100].map(n => (
+                        <option key={n} value={n}>{n}%</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label style={labelStyle}>Festival</label>
                     <input value={pfFestival} onChange={e => setPfFestival(e.target.value)} placeholder="Cannes 2027" style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Estado</label>
-                    <select value={pfStatus} onChange={e => setPfStatus(e.target.value)} style={{ ...inputStyle }}>
+                    <select value={pfStatus} onChange={e => setPfStatus(e.target.value)} style={inputStyle}>
                       <option value="open">Abierto</option>
                       <option value="in_development">En desarrollo</option>
                       <option value="funded">Financiado</option>
@@ -423,9 +434,11 @@ export default function AdminClient({ partners: initPartners, projects: initProj
 
             {/* Projects list */}
             {projects.map(proj => {
-              const pct = proj.funding_total && proj.funding_remaining
-                ? Math.round(((proj.funding_total - proj.funding_remaining) / proj.funding_total) * 100)
-                : null
+              const pct = proj.funding_pct ?? (
+                proj.funding_total && proj.funding_remaining
+                  ? Math.round(((proj.funding_total - proj.funding_remaining) / proj.funding_total) * 100)
+                  : null
+              )
               return (
                 <div key={proj.id} style={{ background: '#111', border: `1px solid ${LINE}`, borderRadius: 10, padding: '20px 22px', marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -435,8 +448,14 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                       <button onClick={() => deleteProject(proj.id)} style={miniBtnStyle(true)}>Eliminar</button>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, margin: '14px 0' }}>
-                    {[['Género', proj.genre], ['País', proj.country], ['Festival', proj.festival], ['Financiación pendiente', proj.funding_remaining ? `${proj.funding_remaining.toLocaleString('es-ES')} €` : '—']].map(([k, v]) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, margin: '14px 0' }}>
+                    {[
+                      ['Género', proj.genre],
+                      ['País', proj.country],
+                      ['Festival', proj.festival],
+                      ['Presupuesto total', proj.funding_total ? `${proj.funding_total.toLocaleString('es-ES')} €` : '—'],
+                      ['Financiación pendiente', proj.funding_remaining ? `${proj.funding_remaining.toLocaleString('es-ES')} €` : '—'],
+                    ].map(([k, v]) => (
                       <div key={k as string}>
                         <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', opacity: .5, marginBottom: 4 }}>{k}</div>
                         <div style={{ fontSize: 13 }}>{(v as string) ?? '—'}</div>
@@ -445,7 +464,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                   </div>
                   {pct !== null && (
                     <div>
-                      <div style={{ fontSize: 11, opacity: .5, marginBottom: 4 }}>{pct}% financiado</div>
+                      <div style={{ fontSize: 11, opacity: .5, marginBottom: 4 }}>{pct}% financiación completada</div>
                       <div style={{ width: '100%', height: 7, background: '#222', borderRadius: 20, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: G, borderRadius: 20 }} />
                       </div>

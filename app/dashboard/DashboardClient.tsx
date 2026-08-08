@@ -351,9 +351,21 @@ export default function DashboardClient({ user, isAdmin, partner, messages, rewa
                     {f.festival && <span style={{ fontSize: 10, color: G, letterSpacing: '.15em' }}>{f.festival}</span>}
                   </div>
                   <h4 style={{ fontWeight: 300, fontSize: 20, color: '#fff', marginBottom: 10 }}>{f.title}</h4>
-                  {f.synopsis && <p style={{ fontSize: 13, opacity: .65, lineHeight: 1.65, marginBottom: 14 }}>{f.synopsis.slice(0, 160)}...</p>}
+                  {f.country && <div style={{ fontSize: 11, opacity: .5, marginBottom: 6, letterSpacing: '.1em' }}>{f.country}</div>}
+                  {f.synopsis && <p style={{ fontSize: 13, opacity: .65, lineHeight: 1.65, marginBottom: 14 }}>{f.synopsis.slice(0, 160)}{f.synopsis.length > 160 ? '…' : ''}</p>}
+                  {f.funding_total != null && (
+                    <div style={{ fontSize: 12, color: CH, marginBottom: 6 }}>Presupuesto: €{f.funding_total.toLocaleString('es-ES')}</div>
+                  )}
                   {f.funding_remaining != null && (
-                    <div style={{ fontSize: 12, color: G }}>Financiación disponible: €{f.funding_remaining.toLocaleString('es-ES')}</div>
+                    <div style={{ fontSize: 12, color: G, marginBottom: 10 }}>Financiación disponible: €{f.funding_remaining.toLocaleString('es-ES')}</div>
+                  )}
+                  {(f.funding_pct != null && f.funding_pct > 0) && (
+                    <div>
+                      <div style={{ fontSize: 11, opacity: .5, marginBottom: 4 }}>{f.funding_pct}% financiado</div>
+                      <div style={{ width: '100%', height: 5, background: '#2c2c2c', borderRadius: 20, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${f.funding_pct}%`, background: G, borderRadius: 20 }} />
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}

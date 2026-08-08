@@ -66,7 +66,9 @@ export type PipelineFilm = {
   genre: string | null
   country: string | null
   synopsis: string | null
+  funding_total: number | null
   funding_remaining: number | null
+  funding_pct: number | null
   festival: string | null
   status: string
   published_at: string | null
