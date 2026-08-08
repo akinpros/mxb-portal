@@ -15,6 +15,9 @@ export default async function AdminPage() {
     { data: messages },
     { data: rewards },
     { data: redemptions },
+    { data: producers },
+    { data: distributors },
+    { data: configRows },
   ] = await Promise.all([
     supabase.from('mxb_partners').select('*').order('created_at', { ascending: false }),
     supabase.from('mxb_projects').select('*').order('created_at', { ascending: false }),
@@ -22,7 +25,13 @@ export default async function AdminPage() {
     supabase.from('mxb_messages').select('*, mxb_partners(full_name, company)').order('created_at', { ascending: false }).limit(50),
     supabase.from('mxb_rewards').select('*').order('cost_points'),
     supabase.from('mxb_redemption_requests').select('*, mxb_partners(full_name), mxb_rewards(name)').order('created_at', { ascending: false }),
+    supabase.from('mxb_producers').select('*').order('created_at', { ascending: false }),
+    supabase.from('mxb_distributors').select('*').order('created_at', { ascending: false }),
+    supabase.from('mxb_config').select('key,value'),
   ])
+
+  const config: Record<string, string> = {}
+  for (const row of (configRows ?? [])) config[row.key] = row.value
 
   return (
     <AdminClient
@@ -32,6 +41,9 @@ export default async function AdminPage() {
       messages={messages ?? []}
       rewards={rewards ?? []}
       redemptions={redemptions ?? []}
+      producers={producers ?? []}
+      distributors={distributors ?? []}
+      config={config}
     />
   )
 }

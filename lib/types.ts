@@ -60,6 +60,31 @@ export type Announcement = {
   created_at: string
 }
 
+export type Producer = {
+  id: string
+  user_id: string | null
+  company_name: string | null
+  contact_name: string
+  email: string
+  phone: string | null
+  country: string | null
+  website: string | null
+  bio: string | null
+  agreement_accepted: boolean
+  created_at: string
+}
+
+export type Distributor = {
+  id: string
+  user_id: string | null
+  company_name: string | null
+  contact_name: string
+  email: string
+  phone: string | null
+  country: string | null
+  created_at: string
+}
+
 export type PipelineFilm = {
   id: string
   title: string

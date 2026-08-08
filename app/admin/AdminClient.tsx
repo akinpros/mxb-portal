@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Partner, Message, Reward, RedemptionRequest, Announcement } from '@/lib/types'
+import type { Partner, Message, Reward, RedemptionRequest, Announcement, Producer, Distributor } from '@/lib/types'
 
 const G = '#D4AF37'
 const CH = '#E8D5C4'
@@ -11,7 +11,7 @@ const PANEL = '#161616'
 const LINE = '#2c2c2c'
 const DANGER = '#c0392b'
 
-type AdminTab = 'partners' | 'pipeline' | 'announcements' | 'messages' | 'rewards' | 'redemptions'
+type AdminTab = 'partners' | 'pipeline' | 'announcements' | 'messages' | 'rewards' | 'redemptions' | 'producers' | 'distributors' | 'value' | 'config'
 
 type Project = {
   id: string
@@ -37,6 +37,9 @@ interface Props {
   messages: (Message & { mxb_partners?: { full_name: string; company: string | null } | null })[]
   rewards: Reward[]
   redemptions: (RedemptionRequest & { mxb_partners?: { full_name: string } | null; mxb_rewards?: { name: string } | null })[]
+  producers: Producer[]
+  distributors: Distributor[]
+  config: Record<string, string>
 }
 
 const inputStyle: React.CSSProperties = {
@@ -55,13 +58,24 @@ const miniBtnStyle = (red?: boolean): React.CSSProperties => ({
   letterSpacing: '.18em', textTransform: 'uppercase', marginRight: 4,
 })
 
-export default function AdminClient({ partners: initPartners, projects: initProjects, announcements: initAnn, messages, rewards: initRewards, redemptions: initRedemptions }: Props) {
+function genPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+export default function AdminClient({
+  partners: initPartners, projects: initProjects, announcements: initAnn,
+  messages, rewards: initRewards, redemptions: initRedemptions,
+  producers: initProducers, distributors: initDistributors, config: initConfig,
+}: Props) {
   const [tab, setTab] = useState<AdminTab>('partners')
   const [partners, setPartners] = useState(initPartners)
   const [projects, setProjects] = useState(initProjects)
   const [announcements, setAnnouncements] = useState(initAnn)
   const [redemptions, setRedemptions] = useState(initRedemptions)
-  const [rewards] = useState(initRewards)
+  const [rewards, setRewards] = useState(initRewards)
+  const [producers, setProducers] = useState(initProducers)
+  const [distributors, setDistributors] = useState(initDistributors)
   const router = useRouter()
   const supabase = createClient()
 
@@ -102,6 +116,52 @@ export default function AdminClient({ partners: initPartners, projects: initProj
   const [annPinned, setAnnPinned] = useState(false)
   const [annPosting, setAnnPosting] = useState(false)
 
+  // --- Producers form ---
+  const [prName, setPrName] = useState('')
+  const [prCompany, setPrCompany] = useState('')
+  const [prPhone, setPrPhone] = useState('')
+  const [prEmail, setPrEmail] = useState('')
+  const [prPass, setPrPass] = useState('')
+  const [prCreating, setPrCreating] = useState(false)
+  const [prMsg, setPrMsg] = useState('')
+
+  // --- Distributors form ---
+  const [drName, setDrName] = useState('')
+  const [drCompany, setDrCompany] = useState('')
+  const [drPhone, setDrPhone] = useState('')
+  const [drEmail, setDrEmail] = useState('')
+  const [drPass, setDrPass] = useState('')
+  const [drCreating, setDrCreating] = useState(false)
+  const [drMsg, setDrMsg] = useState('')
+
+  // --- Value analysis: add reward form ---
+  const [rvName, setRvName] = useState('')
+  const [rvPoints, setRvPoints] = useState('')
+  const [rvSlots, setRvSlots] = useState('')
+  const [rvCost, setRvCost] = useState('')
+  const [rvRange, setRvRange] = useState('')
+  const [rvDesc, setRvDesc] = useState('')
+  const [rvAdding, setRvAdding] = useState(false)
+  const [rvMsg, setRvMsg] = useState('')
+
+  // --- Config state ---
+  const [cfgAiBoost, setCfgAiBoost] = useState(initConfig['ai_boost_enabled'] === 'true')
+  const [cfgDevEmail, setCfgDevEmail] = useState(initConfig['dev_email'] ?? '')
+  const [cfgDevPass, setCfgDevPass] = useState('')
+  const [cfgPoints, setCfgPoints] = useState({
+    standard: initConfig['points_standard'] ?? '5',
+    influencer_500k: initConfig['points_influencer_500k'] ?? '5',
+    influencer_1m: initConfig['points_influencer_1m'] ?? '10',
+    alliance: initConfig['points_alliance'] ?? '5',
+    silver: initConfig['points_sponsor_silver'] ?? '30',
+    gold: initConfig['points_sponsor_gold'] ?? '60',
+    platinum: initConfig['points_sponsor_platinum'] ?? '100',
+    cannes: initConfig['points_sponsor_cannes'] ?? '180',
+    global: initConfig['points_sponsor_global'] ?? '200',
+  })
+  const [cfgSaving, setCfgSaving] = useState(false)
+  const [cfgMsg, setCfgMsg] = useState('')
+
   // Stats
   const activePartners = partners.filter(p => p.status === 'active').length
   const pendingPartners = partners.filter(p => p.status !== 'active').length
@@ -118,8 +178,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
   async function createPartner(e: React.FormEvent) {
     e.preventDefault()
     if (!npEmail || !npName) return
-    setNpCreating(true)
-    setNpMsg('')
+    setNpCreating(true); setNpMsg('')
     const { data, error } = await supabase.from('mxb_partners').insert({
       full_name: npName, email: npEmail, company: npCompany || null,
       position: npPosition || null, phone: npPhone || null, country: npCountry || null,
@@ -156,7 +215,8 @@ export default function AdminClient({ partners: initPartners, projects: initProj
     setPfAdding(true)
     const { data } = await supabase.from('mxb_projects').insert({
       title: pfTitle, genre: pfGenre || null, country: pfCountry || null,
-      synopsis: pfSynopsis || null, funding_total: pfFundingTotal ? parseFloat(pfFundingTotal) : null,
+      synopsis: pfSynopsis || null,
+      funding_total: pfFundingTotal ? parseFloat(pfFundingTotal) : null,
       funding_remaining: pfFundingRemaining ? parseFloat(pfFundingRemaining) : null,
       funding_pct: parseInt(pfFundingPct) || 0,
       festival: pfFestival || null, status: pfStatus,
@@ -200,6 +260,99 @@ export default function AdminClient({ partners: initPartners, projects: initProj
     setRedemptions(prev => prev.map(r => r.id === id ? { ...r, status } : r))
   }
 
+  async function createProducer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!prEmail || !prName) return
+    setPrCreating(true); setPrMsg('')
+    const { data, error } = await supabase.from('mxb_producers').insert({
+      contact_name: prName, company_name: prCompany || null,
+      phone: prPhone || null, email: prEmail,
+    }).select().single()
+    if (error) { setPrMsg('Error: ' + error.message) }
+    else {
+      setProducers(prev => [data as Producer, ...prev])
+      setPrName(''); setPrCompany(''); setPrPhone(''); setPrEmail(''); setPrPass('')
+      setPrMsg('✓ Productora creada. Comparte las credenciales con el productor.')
+    }
+    setPrCreating(false)
+    setTimeout(() => setPrMsg(''), 6000)
+  }
+
+  async function deleteProducer(id: string) {
+    if (!confirm('¿Eliminar esta productora?')) return
+    await supabase.from('mxb_producers').delete().eq('id', id)
+    setProducers(prev => prev.filter(p => p.id !== id))
+  }
+
+  async function createDistributor(e: React.FormEvent) {
+    e.preventDefault()
+    if (!drEmail || !drName) return
+    setDrCreating(true); setDrMsg('')
+    const { data, error } = await supabase.from('mxb_distributors').insert({
+      contact_name: drName, company_name: drCompany || null,
+      phone: drPhone || null, email: drEmail,
+    }).select().single()
+    if (error) { setDrMsg('Error: ' + error.message) }
+    else {
+      setDistributors(prev => [data as Distributor, ...prev])
+      setDrName(''); setDrCompany(''); setDrPhone(''); setDrEmail(''); setDrPass('')
+      setDrMsg('✓ Distribuidora creada. Comparte las credenciales con el contacto.')
+    }
+    setDrCreating(false)
+    setTimeout(() => setDrMsg(''), 6000)
+  }
+
+  async function deleteDistributor(id: string) {
+    if (!confirm('¿Eliminar esta distribuidora?')) return
+    await supabase.from('mxb_distributors').delete().eq('id', id)
+    setDistributors(prev => prev.filter(d => d.id !== id))
+  }
+
+  async function addReward(e: React.FormEvent) {
+    e.preventDefault()
+    if (!rvName || !rvPoints) return
+    setRvAdding(true); setRvMsg('')
+    const { data, error } = await supabase.from('mxb_rewards').insert({
+      name: rvName, description: rvDesc || null,
+      cost_points: parseInt(rvPoints),
+      slots: rvSlots ? parseInt(rvSlots) : null,
+      real_cost_eur: rvCost ? parseFloat(rvCost) : null,
+      contribution_range: rvRange || null,
+      is_active: true,
+    }).select().single()
+    if (error) { setRvMsg('Error: ' + error.message) }
+    else {
+      setRewards(prev => [...prev, data as Reward].sort((a, b) => a.cost_points - b.cost_points))
+      setRvName(''); setRvPoints(''); setRvSlots(''); setRvCost(''); setRvRange(''); setRvDesc('')
+      setRvMsg('✓ Recompensa añadida')
+    }
+    setRvAdding(false)
+    setTimeout(() => setRvMsg(''), 4000)
+  }
+
+  async function saveConfig(e: React.FormEvent) {
+    e.preventDefault()
+    setCfgSaving(true); setCfgMsg('')
+    const entries = [
+      { key: 'ai_boost_enabled', value: cfgAiBoost ? 'true' : 'false' },
+      { key: 'dev_email', value: cfgDevEmail },
+      { key: 'points_standard', value: cfgPoints.standard },
+      { key: 'points_influencer_500k', value: cfgPoints.influencer_500k },
+      { key: 'points_influencer_1m', value: cfgPoints.influencer_1m },
+      { key: 'points_alliance', value: cfgPoints.alliance },
+      { key: 'points_sponsor_silver', value: cfgPoints.silver },
+      { key: 'points_sponsor_gold', value: cfgPoints.gold },
+      { key: 'points_sponsor_platinum', value: cfgPoints.platinum },
+      { key: 'points_sponsor_cannes', value: cfgPoints.cannes },
+      { key: 'points_sponsor_global', value: cfgPoints.global },
+    ]
+    const { error } = await supabase.from('mxb_config').upsert(entries, { onConflict: 'key' })
+    if (error) setCfgMsg('Error: ' + error.message)
+    else setCfgMsg('✓ Configuración guardada')
+    setCfgSaving(false)
+    setTimeout(() => setCfgMsg(''), 4000)
+  }
+
   const navBtn = (t: AdminTab, label: string) => (
     <button key={t} onClick={() => setTab(t)} style={{
       background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Georgia,serif',
@@ -218,6 +371,13 @@ export default function AdminClient({ partners: initPartners, projects: initProj
     </div>
   )
 
+  const primaryBtn = (loading: boolean): React.CSSProperties => ({
+    padding: '10px 28px', background: loading ? '#555' : G, color: '#0b0b0b',
+    border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer',
+    fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase',
+    fontFamily: 'Georgia,serif', fontWeight: 600,
+  })
+
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: 'Georgia,serif', color: '#fff' }}>
       {/* Admin bar */}
@@ -228,13 +388,17 @@ export default function AdminClient({ partners: initPartners, projects: initProj
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(11,11,11,.97)', borderBottom: `1px solid ${LINE}`, padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontSize: 15, letterSpacing: '.28em', color: G, fontWeight: 300 }}>MXB · ADMIN</div>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {navBtn('partners', 'Partners & Puntos')}
           {navBtn('pipeline', 'Pipeline')}
+          {navBtn('producers', 'Productores')}
+          {navBtn('distributors', 'Distribuidoras')}
           {navBtn('announcements', 'Anuncios')}
           {navBtn('messages', 'Mensajes')}
           {navBtn('rewards', 'Recompensas')}
           {navBtn('redemptions', `Solicitudes${unreadRedemptions > 0 ? ` (${unreadRedemptions})` : ''}`)}
+          {navBtn('value', 'Análisis de Valor')}
+          {navBtn('config', 'Configuración')}
           <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Georgia,serif', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: '#e07060', padding: '8px 4px' }}>Salir</button>
         </div>
       </nav>
@@ -247,7 +411,6 @@ export default function AdminClient({ partners: initPartners, projects: initProj
             <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Brand Partners</h2>
             <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Alta, gestión, puntos y referidos de la edición 2027</p>
 
-            {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
               {stat('🤝', 'Partners activos', activePartners)}
               {stat('⏳', 'Pendientes', pendingPartners)}
@@ -255,7 +418,6 @@ export default function AdminClient({ partners: initPartners, projects: initProj
               {stat('🎟️', 'Canjes pendientes', unreadRedemptions)}
             </div>
 
-            {/* Points exposure */}
             <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
               <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 4 }}>📊 Exposición en puntos</h4>
               <p style={{ fontSize: 13, opacity: .55, marginBottom: 16 }}>Cada punto es una promesa pendiente — visibilidad, alfombra roja, un ticket.</p>
@@ -266,7 +428,6 @@ export default function AdminClient({ partners: initPartners, projects: initProj
               </div>
             </div>
 
-            {/* Add partner form */}
             <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
               <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 4 }}>Añadir nuevo partner</h4>
               <p style={{ fontSize: 13, opacity: .55, marginBottom: 18 }}>Acceso solo por invitación. Tú creas la cuenta y le envías las credenciales.</p>
@@ -299,7 +460,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                   </label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <button type="submit" disabled={npCreating} style={{ padding: '10px 28px', background: npCreating ? '#555' : G, color: '#0b0b0b', border: 'none', borderRadius: 6, cursor: npCreating ? 'not-allowed' : 'pointer', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', fontFamily: 'Georgia,serif', fontWeight: 600 }}>
+                  <button type="submit" disabled={npCreating} style={primaryBtn(npCreating)}>
                     {npCreating ? 'Creando…' : 'Crear partner →'}
                   </button>
                   {npMsg && <span style={{ fontSize: 13, color: npMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{npMsg}</span>}
@@ -307,7 +468,6 @@ export default function AdminClient({ partners: initPartners, projects: initProj
               </form>
             </div>
 
-            {/* Partners table */}
             <div style={panel}>
               <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 18 }}>Todos los partners ({partners.length})</h4>
               <div style={{ overflowX: 'auto' }}>
@@ -369,7 +529,6 @@ export default function AdminClient({ partners: initPartners, projects: initProj
             <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Pipeline de Oportunidades</h2>
             <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Proyectos visibles para los Brand Partners — sin exponer el nombre de la productora</p>
 
-            {/* Add project form */}
             <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
               <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 18 }}>Añadir oportunidad</h4>
               <form onSubmit={addProject}>
@@ -426,13 +585,12 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                   <label style={labelStyle}>URL del dossier (opcional)</label>
                   <input value={pfDossier} onChange={e => setPfDossier(e.target.value)} placeholder="https://…" style={inputStyle} />
                 </div>
-                <button type="submit" disabled={pfAdding} style={{ padding: '10px 28px', background: pfAdding ? '#555' : G, color: '#0b0b0b', border: 'none', borderRadius: 6, cursor: pfAdding ? 'not-allowed' : 'pointer', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', fontFamily: 'Georgia,serif', fontWeight: 600 }}>
+                <button type="submit" disabled={pfAdding} style={primaryBtn(pfAdding)}>
                   {pfAdding ? 'Añadiendo…' : 'Añadir al pipeline →'}
                 </button>
               </form>
             </div>
 
-            {/* Projects list */}
             {projects.map(proj => {
               const pct = proj.funding_pct ?? (
                 proj.funding_total && proj.funding_remaining
@@ -481,6 +639,184 @@ export default function AdminClient({ partners: initPartners, projects: initProj
           </div>
         )}
 
+        {/* ===== PRODUCTORES ===== */}
+        {tab === 'producers' && (
+          <div>
+            <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Productores</h2>
+            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Gestión de productoras y sus proyectos en la plataforma</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
+              {stat('🎬', 'Productoras activas', producers.length)}
+              {stat('🎥', 'Proyectos publicados', projects.filter(p => p.published_at).length)}
+              {stat('🤝', 'Con distribuidora', '—')}
+              {stat('🔍', 'Buscando distribuidora', '—')}
+            </div>
+
+            <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
+              <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 4 }}>Añadir productora</h4>
+              <p style={{ fontSize: 13, opacity: .55, marginBottom: 18 }}>Acceso solo por invitación. Crea la cuenta y comparte las credenciales.</p>
+              <form onSubmit={createProducer}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Nombre del productor</label>
+                    <input value={prName} onChange={e => setPrName(e.target.value)} required placeholder="Nombre y apellido" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Productora</label>
+                    <input value={prCompany} onChange={e => setPrCompany(e.target.value)} placeholder="Nombre de la productora" style={inputStyle} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Teléfono</label>
+                    <input type="tel" value={prPhone} onChange={e => setPrPhone(e.target.value)} placeholder="+34 600 000 000" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input type="email" value={prEmail} onChange={e => setPrEmail(e.target.value)} required placeholder="productor@productora.com" style={inputStyle} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Contraseña de acceso</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={prPass} onChange={e => setPrPass(e.target.value)} placeholder="Contraseña segura" style={{ ...inputStyle, flex: 1 }} />
+                    <button type="button" onClick={() => setPrPass(genPassword())} style={{ ...miniBtnStyle(), whiteSpace: 'nowrap', padding: '10px 16px' }}>🎲 Generar</button>
+                  </div>
+                  {prPass && <div style={{ fontSize: 11, color: CH, marginTop: 6, opacity: .7 }}>Copia esta contraseña antes de guardar — no se almacenará aquí</div>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <button type="submit" disabled={prCreating} style={primaryBtn(prCreating)}>
+                    {prCreating ? 'Creando…' : 'Crear productora →'}
+                  </button>
+                  {prMsg && <span style={{ fontSize: 13, color: prMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{prMsg}</span>}
+                </div>
+              </form>
+            </div>
+
+            <div style={panel}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Todas las productoras ({producers.length})</h4>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Nombre', 'Productora', 'Email', 'Teléfono', 'País', 'Acciones'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: CH, padding: '11px 12px', borderBottom: `1px solid ${G}`, fontWeight: 400 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {producers.map(p => (
+                      <tr key={p.id}>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 14 }}>{p.contact_name}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13, opacity: .7 }}>{p.company_name ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{p.email}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{p.phone ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{p.country ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}` }}>
+                          <button onClick={() => deleteProducer(p.id)} style={miniBtnStyle(true)}>Eliminar</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {producers.length === 0 && (
+                      <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', opacity: .4 }}>No hay productoras registradas todavía</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== DISTRIBUIDORAS ===== */}
+        {tab === 'distributors' && (
+          <div>
+            <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Distribuidoras</h2>
+            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Gestión de distribuidoras y agencias internacionales</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
+              {stat('🌍', 'Distribuidoras activas', distributors.length)}
+              {stat('📋', 'Solicitudes totales', '—')}
+              {stat('📬', 'Sin responder', '—')}
+              {stat('🎞️', 'Proyectos con interés', '—')}
+            </div>
+
+            <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
+              <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 4 }}>Añadir distribuidora</h4>
+              <p style={{ fontSize: 13, opacity: .55, marginBottom: 18 }}>Acceso solo por invitación. Crea la cuenta y comparte las credenciales.</p>
+              <form onSubmit={createDistributor}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Nombre de contacto</label>
+                    <input value={drName} onChange={e => setDrName(e.target.value)} required placeholder="Nombre y apellido" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Distribuidora / Agencia</label>
+                    <input value={drCompany} onChange={e => setDrCompany(e.target.value)} placeholder="Nombre de la empresa" style={inputStyle} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Teléfono</label>
+                    <input type="tel" value={drPhone} onChange={e => setDrPhone(e.target.value)} placeholder="+44 20 0000 0000" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input type="email" value={drEmail} onChange={e => setDrEmail(e.target.value)} required placeholder="contacto@distribuidora.com" style={inputStyle} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Contraseña de acceso</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={drPass} onChange={e => setDrPass(e.target.value)} placeholder="Contraseña segura" style={{ ...inputStyle, flex: 1 }} />
+                    <button type="button" onClick={() => setDrPass(genPassword())} style={{ ...miniBtnStyle(), whiteSpace: 'nowrap', padding: '10px 16px' }}>🎲 Generar</button>
+                  </div>
+                  {drPass && <div style={{ fontSize: 11, color: CH, marginTop: 6, opacity: .7 }}>Copia esta contraseña antes de guardar — no se almacenará aquí</div>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <button type="submit" disabled={drCreating} style={primaryBtn(drCreating)}>
+                    {drCreating ? 'Creando…' : 'Crear distribuidora →'}
+                  </button>
+                  {drMsg && <span style={{ fontSize: 13, color: drMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{drMsg}</span>}
+                </div>
+              </form>
+            </div>
+
+            <div style={panel}>
+              <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 18 }}>Distribuidoras y sus solicitudes ({distributors.length})</h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Contacto', 'Empresa', 'Email', 'Teléfono', 'País', 'Acciones'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: CH, padding: '11px 12px', borderBottom: `1px solid ${G}`, fontWeight: 400 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {distributors.map(d => (
+                      <tr key={d.id}>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 14 }}>{d.contact_name}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13, opacity: .7 }}>{d.company_name ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{d.email}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{d.phone ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .6 }}>{d.country ?? '—'}</td>
+                        <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}` }}>
+                          <button onClick={() => deleteDistributor(d.id)} style={miniBtnStyle(true)}>Eliminar</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {distributors.length === 0 && (
+                      <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', opacity: .4 }}>No hay distribuidoras registradas todavía</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ===== ANNOUNCEMENTS ===== */}
         {tab === 'announcements' && (
           <div>
@@ -514,7 +850,7 @@ export default function AdminClient({ partners: initPartners, projects: initProj
                     Fijar arriba
                   </label>
                 </div>
-                <button type="submit" disabled={annPosting} style={{ padding: '10px 28px', background: annPosting ? '#555' : G, color: '#0b0b0b', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', fontFamily: 'Georgia,serif', fontWeight: 600 }}>
+                <button type="submit" disabled={annPosting} style={primaryBtn(annPosting)}>
                   {annPosting ? 'Publicando…' : 'Publicar →'}
                 </button>
               </form>
@@ -638,6 +974,230 @@ export default function AdminClient({ partners: initPartners, projects: initProj
             </div>
           </div>
         )}
+
+        {/* ===== ANÁLISIS DE VALOR ===== */}
+        {tab === 'value' && (() => {
+          const rewardsWithCost = rewards.filter(r => r.real_cost_eur !== null && r.real_cost_eur !== undefined)
+          const rewardsWithSlots = rewards.filter(r => r.slots !== null)
+          const totalExposure = rewards.reduce((s, r) => {
+            if (r.real_cost_eur && r.slots) return s + r.real_cost_eur * r.slots
+            return s
+          }, 0)
+          const avgCostPerPoint = rewardsWithCost.length > 0
+            ? rewardsWithCost.reduce((s, r) => s + (r.real_cost_eur! / r.cost_points), 0) / rewardsWithCost.length
+            : 0
+
+          return (
+            <div>
+              <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Análisis de Valor</h2>
+              <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Mapa económico de tu catálogo de recompensas</p>
+
+              <div style={{ ...panel, borderColor: G, marginBottom: 28, background: 'rgba(212,175,55,.05)' }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>💡</div>
+                <h4 style={{ fontWeight: 300, fontSize: 20, color: G, marginBottom: 8 }}>1 punto = 1.000 € de valor económico traído</h4>
+                <p style={{ fontSize: 14, opacity: .7, lineHeight: 1.8, margin: 0 }}>
+                  Cada punto que emites representa el compromiso de un partner de aportar 1.000 € en valor — sea en sponsorship, difusión o relaciones. Este panel te ayuda a ver cuánto te puede costar honrar esos puntos con las recompensas del catálogo.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
+                {stat('💸', 'Coste si se agotan cupos', totalExposure > 0 ? `${totalExposure.toLocaleString('es-ES')} €` : '—')}
+                {stat('📊', 'Coste medio por punto', avgCostPerPoint > 0 ? `${avgCostPerPoint.toFixed(2)} €` : '—')}
+                {stat('✅', 'Recompensas con coste definido', rewardsWithCost.length)}
+                {stat('🎫', 'Recompensas con cupo limitado', rewardsWithSlots.length)}
+              </div>
+
+              {/* Add reward form */}
+              <div style={{ ...panel, borderColor: G, marginBottom: 28 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 18 }}>+ Añadir recompensa nueva</h4>
+                <form onSubmit={addReward}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <div>
+                      <label style={labelStyle}>Nombre de la recompensa</label>
+                      <input value={rvName} onChange={e => setRvName(e.target.value)} required placeholder="Alfombra roja Cannes…" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Puntos necesarios</label>
+                      <input type="number" value={rvPoints} onChange={e => setRvPoints(e.target.value)} required placeholder="100" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Cupos disponibles</label>
+                      <input type="number" value={rvSlots} onChange={e => setRvSlots(e.target.value)} placeholder="5" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Tu coste real (€/unidad)</label>
+                      <input type="number" step="0.01" value={rvCost} onChange={e => setRvCost(e.target.value)} placeholder="250" style={inputStyle} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginBottom: 14 }}>
+                    <div>
+                      <label style={labelStyle}>Rango de aportación</label>
+                      <input value={rvRange} onChange={e => setRvRange(e.target.value)} placeholder="Gold – Platinum" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Descripción</label>
+                      <input value={rvDesc} onChange={e => setRvDesc(e.target.value)} placeholder="Descripción breve para el partner" style={inputStyle} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <button type="submit" disabled={rvAdding} style={primaryBtn(rvAdding)}>
+                      {rvAdding ? 'Añadiendo…' : 'Añadir recompensa →'}
+                    </button>
+                    {rvMsg && <span style={{ fontSize: 13, color: rvMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{rvMsg}</span>}
+                  </div>
+                </form>
+              </div>
+
+              {/* Rewards analysis table */}
+              <div style={panel}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 18 }}>Catálogo completo con análisis económico</h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        {['Recompensa', 'Puntos', 'Cupos', 'Tu coste real / ud (€)', 'Rango de aportación', 'Exposición máx. (€)', '€ / punto', 'Acciones'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', color: CH, padding: '11px 12px', borderBottom: `1px solid ${G}`, fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rewards.map(r => {
+                        const exposure = r.real_cost_eur && r.slots ? r.real_cost_eur * r.slots : null
+                        const eurPerPoint = r.real_cost_eur ? r.real_cost_eur / r.cost_points : null
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 14 }}>
+                              <div>{r.name}</div>
+                              {r.description && <div style={{ fontSize: 11, opacity: .5, marginTop: 2 }}>{r.description}</div>}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 14, color: G }}>{r.cost_points}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13 }}>{r.slots ?? '∞'}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13 }}>{r.real_cost_eur != null ? `${r.real_cost_eur} €` : '—'}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .7 }}>{r.contribution_range ?? '—'}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13, color: exposure ? CH : undefined }}>{exposure != null ? `${exposure.toLocaleString('es-ES')} €` : '—'}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}`, fontSize: 13 }}>{eurPerPoint != null ? `${eurPerPoint.toFixed(2)} €` : '—'}</td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${LINE}` }}>
+                              <button onClick={async () => {
+                                await supabase.from('mxb_rewards').update({ is_active: !r.is_active }).eq('id', r.id)
+                                setRewards(prev => prev.map(x => x.id === r.id ? { ...x, is_active: !x.is_active } : x))
+                              }} style={miniBtnStyle(!r.is_active)}>
+                                {r.is_active ? 'Desactivar' : 'Activar'}
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {rewards.length === 0 && (
+                        <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', opacity: .4 }}>No hay recompensas todavía</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ===== CONFIGURACIÓN ===== */}
+        {tab === 'config' && (
+          <div>
+            <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Configuración</h2>
+            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Ajustes globales de la plataforma MXB</p>
+
+            <form onSubmit={saveConfig}>
+              {/* AI Boost Selection */}
+              <div style={{ ...panel, borderColor: G, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 16 }}>🤖 AI Boost Selection</h4>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                  <div style={{ position: 'relative', width: 46, height: 26, flexShrink: 0 }}>
+                    <input type="checkbox" checked={cfgAiBoost} onChange={e => setCfgAiBoost(e.target.checked)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                    <div onClick={() => setCfgAiBoost(v => !v)} style={{ position: 'absolute', inset: 0, background: cfgAiBoost ? G : '#333', borderRadius: 13, cursor: 'pointer', transition: 'background .25s' }}>
+                      <div style={{ position: 'absolute', top: 3, left: cfgAiBoost ? 23 : 3, width: 20, height: 20, background: '#fff', borderRadius: '50%', transition: 'left .25s' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, color: cfgAiBoost ? G : '#aaa' }}>Directorio AI Boost Selection {cfgAiBoost ? 'activo' : 'inactivo'}</div>
+                    <div style={{ fontSize: 12, opacity: .5, marginTop: 3 }}>Activa el portal de selección impulsado por IA para Brand Partners</div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Developer access */}
+              <div style={{ ...panel, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 16 }}>👩‍💻 Acceso Developer</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Email del developer</label>
+                    <input type="email" value={cfgDevEmail} onChange={e => setCfgDevEmail(e.target.value)} placeholder="dev@moviesxbrands.com" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Contraseña temporal</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input value={cfgDevPass} onChange={e => setCfgDevPass(e.target.value)} placeholder="Genera una nueva contraseña" style={{ ...inputStyle, flex: 1 }} />
+                      <button type="button" onClick={() => setCfgDevPass(genPassword())} style={{ ...miniBtnStyle(), whiteSpace: 'nowrap', padding: '10px 16px' }}>🎲 Generar</button>
+                    </div>
+                  </div>
+                </div>
+                {cfgDevPass && (
+                  <div style={{ background: 'rgba(212,175,55,.08)', border: `1px solid ${G}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13 }}>
+                    <span style={{ opacity: .6 }}>Contraseña generada: </span>
+                    <span style={{ color: G, fontFamily: 'monospace', fontSize: 15 }}>{cfgDevPass}</span>
+                    <span style={{ opacity: .5, fontSize: 11, marginLeft: 10 }}>— cópiala ahora</span>
+                  </div>
+                )}
+                <button type="button" style={{ ...miniBtnStyle(true), padding: '8px 16px', fontSize: 10 }}>
+                  🚫 Revocar acceso Developer
+                </button>
+              </div>
+
+              {/* Points per referral */}
+              <div style={{ ...panel, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 6 }}>⭐ Puntos por tipo de referido</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 20 }}>Define cuántos puntos recibe un partner al traer cada tipo de contacto o sponsor.</p>
+
+                <h5 style={{ fontSize: 11, letterSpacing: '.28em', textTransform: 'uppercase', color: CH, opacity: .7, marginBottom: 14 }}>Contactos</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+                  {[
+                    ['Contacto estándar', 'standard'],
+                    ['Influencer 500K', 'influencer_500k'],
+                    ['Influencer 1M+', 'influencer_1m'],
+                    ['Alianza estratégica', 'alliance'],
+                  ].map(([label, key]) => (
+                    <div key={key}>
+                      <label style={labelStyle}>{label}</label>
+                      <input type="number" min="0" value={cfgPoints[key as keyof typeof cfgPoints]} onChange={e => setCfgPoints(p => ({ ...p, [key]: e.target.value }))} style={inputStyle} />
+                    </div>
+                  ))}
+                </div>
+
+                <h5 style={{ fontSize: 11, letterSpacing: '.28em', textTransform: 'uppercase', color: CH, opacity: .7, marginBottom: 14 }}>Sponsors</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14 }}>
+                  {[
+                    ['Silver', 'silver'],
+                    ['Gold', 'gold'],
+                    ['Platinum', 'platinum'],
+                    ['Cannes + Berlinale', 'cannes'],
+                    ['Global Ecosystem Partner', 'global'],
+                  ].map(([label, key]) => (
+                    <div key={key}>
+                      <label style={labelStyle}>{label}</label>
+                      <input type="number" min="0" value={cfgPoints[key as keyof typeof cfgPoints]} onChange={e => setCfgPoints(p => ({ ...p, [key]: e.target.value }))} style={inputStyle} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Save */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <button type="submit" disabled={cfgSaving} style={primaryBtn(cfgSaving)}>
+                  {cfgSaving ? 'Guardando…' : 'Guardar configuración →'}
+                </button>
+                {cfgMsg && <span style={{ fontSize: 13, color: cfgMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{cfgMsg}</span>}
+              </div>
+            </form>
+          </div>
+        )}
+
       </div>
     </div>
   )
