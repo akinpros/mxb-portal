@@ -50,8 +50,15 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
   if(c.announcement_banner){
     var bar=document.createElement('div');
     bar.id='mxb-announcement-bar';
-    bar.style='background:#D4AF37;color:#0B0B0B;text-align:center;padding:11px 40px;font-size:13px;font-weight:700;position:relative;z-index:99999;letter-spacing:.03em;';
-    bar.innerHTML=c.announcement_banner+'<span onclick="this.parentNode.style.display=\'none\'" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;font-weight:400;opacity:.7;">✕</span>';
+    bar.style.cssText='background:#D4AF37;color:#0B0B0B;text-align:center;padding:11px 40px;font-size:13px;font-weight:700;position:relative;z-index:99999;letter-spacing:.03em;';
+    var msg=document.createElement('span');
+    msg.textContent=c.announcement_banner;
+    var close=document.createElement('span');
+    close.textContent='✕';
+    close.style.cssText='position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;font-weight:400;opacity:.7;';
+    close.onclick=function(){bar.style.display='none';};
+    bar.appendChild(msg);
+    bar.appendChild(close);
     document.body.prepend(bar);
   }
 
@@ -105,7 +112,7 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
         if(videoId){
           var sec=document.createElement('div');
           sec.id='mxb-featured-video';
-          sec.style='max-width:700px;margin:32px auto;padding:0 24px;';
+          sec.style.cssText='max-width:700px;margin:32px auto;padding:0 24px;';
           sec.innerHTML='<div style="color:#D4AF37;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">✦ '+(c.featured_video_title||'Featured Video')+'</div><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;"><iframe src="https://www.youtube.com/embed/'+videoId+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>';
           var hubRoot=document.getElementById('hubRootPanel');
           if(hubRoot) hubRoot.appendChild(sec);
