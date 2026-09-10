@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,11 +14,6 @@ const CONFIG_KEYS = [
 
 export async function GET() {
   const cfg: Record<string, string> = {}
-  try {
-    const supabase = createAdminClient()
-    const { data } = await supabase.from('mxb_config').select('key,value').in('key', CONFIG_KEYS)
-    data?.forEach((r: { key: string; value: string }) => { cfg[r.key] = r.value ?? '' })
-  } catch {}
 
   function v(key: string) {
     return (cfg[key] || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -578,11 +572,35 @@ var SB_URL='${SB_URL}';
 var SB_KEY='${SB_KEY}';
 var PIN='1234567';
 
+// ── Load all fields from Supabase ──
+function loadAllFields(){
+  var keys=${JSON.stringify([
+    'announcement_banner','welcome_message','hub_title','hub_subtitle','hub_footer',
+    'premium_title','premium_desc','premium_cta','premium_hero_image','gala_image',
+    'event_title','event_date','event_location','event_price','event_cta_url',
+    'thrivecart_gala_url','thrivecart_redcarpet_url','featured_video_url','featured_video_title'
+  ])};
+  fetch(SB_URL+'/rest/v1/mxb_config?key=in.('+keys.join(',')+')',{
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+  }).then(function(r){return r.json();}).then(function(rows){
+    if(!Array.isArray(rows))return;
+    rows.forEach(function(row){
+      var el=document.getElementById('f-'+row.key);
+      if(el&&row.value)el.value=row.value;
+    });
+    // trigger image previews
+    var hero=document.getElementById('f-premium_hero_image');
+    if(hero&&hero.value)previewImg(hero,'prev-hero');
+    var gala=document.getElementById('f-gala_image');
+    if(gala&&gala.value)previewImg(gala,'prev-gala');
+  }).catch(function(){});
+}
+
 // ── PIN ──
 ;(function(){
   var ok=false;
   try{ok=sessionStorage.getItem('mxb_cs_auth')==='1';}catch(e){}
-  if(ok) document.getElementById('pin-overlay').style.display='none';
+  if(ok){document.getElementById('pin-overlay').style.display='none';loadAllFields();}
   else   document.getElementById('pin-inp').focus();
 })();
 function checkPin(){
@@ -590,6 +608,7 @@ function checkPin(){
   if(v===PIN){
     try{sessionStorage.setItem('mxb_cs_auth','1');}catch(e){}
     document.getElementById('pin-overlay').style.display='none';
+    loadAllFields();
   }else{
     document.getElementById('pin-err').textContent='Contraseña incorrecta.';
     document.getElementById('pin-inp').value='';
