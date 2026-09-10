@@ -5,12 +5,6 @@ export const dynamic = 'force-dynamic'
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-const CONFIG_KEYS = [
-  'announcement_banner', 'welcome_message', 'hub_title', 'hub_subtitle', 'hub_footer',
-  'premium_title', 'premium_desc', 'premium_cta', 'premium_hero_image', 'gala_image',
-  'event_title', 'event_date', 'event_location', 'event_price', 'event_cta_url',
-  'thrivecart_gala_url', 'thrivecart_redcarpet_url', 'featured_video_url', 'featured_video_title',
-]
 
 export async function GET() {
   const cfg: Record<string, string> = {}
