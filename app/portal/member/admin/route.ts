@@ -76,7 +76,7 @@ body{font-family:Arial,Helvetica,sans-serif;background:#0B0B0B;overflow:hidden;}
 </div>
 
 <!-- ── Portal iframe ── -->
-<iframe id="portal-frame" src="/portal/member" allow="fullscreen"></iframe>
+<iframe id="portal-frame" src="/portal/member" sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-downloads" allow="fullscreen"></iframe>
 
 <!-- ── PIN screen ── -->
 <div id="mxb-pin-screen" style="position:fixed;inset:0;background:#0B0B0B;z-index:99999;display:flex;align-items:center;justify-content:center;">
