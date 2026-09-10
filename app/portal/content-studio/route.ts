@@ -406,7 +406,7 @@ function addGalleryRow(item,i){
   div.innerHTML='<div class="list-item-fields">'
     +'<input type="url" placeholder="URL de la imagen (https://...)" value="'+esc(item.url||'')+'" oninput="previewListImg(this)" data-preview>'
     +'<input type="text" placeholder="Pie de foto (opcional)" value="'+esc(item.caption||'')+'">'
-    +'<img class="item-img-preview" src="'+esc(item.url||'')+'" onerror="this.style.display=\'none\'" '+(item.url?"style='display:block'":'')+' >'
+    +'<img class="item-img-preview" src="'+esc(item.url||'')+'" onerror="this.hidden=true" '+(item.url?'style="display:block"':'')+' >'
     +'</div>'
     +'<button class="btn-remove" onclick="this.parentNode.remove()">×</button>';
   list.appendChild(div);
@@ -449,7 +449,7 @@ function addSectionRow(item){
     +'<input type="text" placeholder="Título de la sección" value="'+esc(item.title||'')+'">'
     +'<textarea placeholder="Texto / descripción" rows="2" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;padding:8px 12px;resize:vertical;">'+esc(item.text||'')+'</textarea>'
     +'<input type="url" placeholder="URL de imagen (opcional)" value="'+esc(item.image||'')+'" oninput="previewListImg(this)" data-preview>'
-    +'<img class="item-img-preview" src="'+esc(item.image||'')+'" onerror="this.style.display=\'none\'" '+(item.image?"style='display:block'":'')+' >'
+    +'<img class="item-img-preview" src="'+esc(item.image||'')+'" onerror="this.hidden=true" '+(item.image?'style="display:block"':'')+' >'
     +'<input type="url" placeholder="Enlace / URL del botón (opcional)" value="'+esc(item.link||'')+'">'
     +'</div>'
     +'<button class="btn-remove" onclick="this.parentNode.remove()">×</button>';
