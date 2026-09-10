@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,340 +13,649 @@ const CONFIG_KEYS = [
   'thrivecart_gala_url', 'thrivecart_redcarpet_url', 'featured_video_url', 'featured_video_title',
 ]
 
-const EDITABLES = [
-  { key: 'hub_title',        label: '🏠 Título del Hub',         type: 'text',     selectors: ['.mhv-title'] },
-  { key: 'hub_subtitle',     label: '🏠 Subtítulo del Hub',      type: 'textarea', selectors: ['.mhv-sub'] },
-  { key: 'hub_footer',       label: '🏠 Tagline del Footer',     type: 'text',     selectors: ['.hub-footer-tagline'] },
-  { key: 'announcement_banner', label: '📣 Announcement Banner', type: 'text',     selectors: ['#mxb-announcement-bar'] },
-  { key: 'premium_title',    label: '⭐ Título Premium',         type: 'text',     selectors: ['#hubPremiumUpgradeTitle'] },
-  { key: 'premium_desc',     label: '⭐ Descripción Premium',    type: 'textarea', selectors: ['#hubPremiumUpgradeDesc'] },
-  { key: 'premium_cta',      label: '⭐ Botón Premium',          type: 'text',     selectors: ['#hubPremiumUpgradeCta'] },
-  { key: 'premium_hero_image', label: '🖼️ Imagen Hero Premium', type: 'image',    selectors: ['#hubPremiumUpgradeImage', '#premiumHeroImageV45'] },
-  { key: 'gala_image',       label: '🖼️ Imagen Gala',           type: 'image',    selectors: ['#premiumGalaImage'] },
-]
-
-const SETTINGS = [
-  { key: 'thrivecart_gala_url',      label: '🛒 ThriveCart — URL Gala Access', type: 'url' },
-  { key: 'thrivecart_redcarpet_url', label: '🛒 ThriveCart — URL Red Carpet',  type: 'url' },
-  { key: 'featured_video_url',       label: '🎬 Vídeo destacado (YouTube URL)', type: 'url' },
-  { key: 'featured_video_title',     label: '🎬 Título del vídeo',             type: 'text' },
-  { key: 'welcome_message',          label: '💬 Mensaje de bienvenida',        type: 'textarea' },
-  { key: 'event_title',              label: '🎭 Nombre del evento',            type: 'text' },
-  { key: 'event_date',               label: '📅 Fecha del evento',             type: 'text' },
-  { key: 'event_location',           label: '📍 Lugar del evento',             type: 'text' },
-  { key: 'event_price',              label: '💰 Precio del evento',            type: 'text' },
-  { key: 'event_cta_url',            label: '🔗 Enlace CTA del evento',        type: 'url' },
-]
-
 export async function GET() {
-  const editablesJson = JSON.stringify(EDITABLES)
-  const settingsJson  = JSON.stringify(SETTINGS)
+  const cfg: Record<string, string> = {}
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase.from('mxb_config').select('key,value').in('key', CONFIG_KEYS)
+    data?.forEach((r: { key: string; value: string }) => { cfg[r.key] = r.value ?? '' })
+  } catch {}
+
+  function v(key: string) {
+    return (cfg[key] || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+  function vt(key: string) {
+    return (cfg[key] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
 
   const html = `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MXB Editor — Portal</title>
+<title>MXB Content Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,Helvetica,sans-serif;background:#0B0B0B;overflow:hidden;}
-#mxb-toolbar{position:fixed;top:0;left:0;right:0;height:50px;background:#0B0B0B;border-bottom:2px solid #D4AF37;z-index:9999;display:flex;align-items:center;padding:0 16px;gap:10px;}
-#portal-frame{position:fixed;top:50px;left:0;right:0;bottom:0;width:100%;height:calc(100vh - 50px);border:none;background:#000;}
-#mxb-popover{position:fixed;background:#111;border:1px solid #D4AF37;border-radius:8px;padding:18px;z-index:99999;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.95);}
-#mxb-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99998;display:flex;align-items:center;justify-content:center;}
-#mxb-modal{background:#0d0d0d;border:1px solid #D4AF37;border-radius:10px;padding:24px;width:500px;max-width:96vw;max-height:88vh;overflow-y:auto;}
-.mxb-inp{width:100%;background:#111;border:1px solid #252525;border-radius:4px;color:#fff;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;}
-.mxb-inp:focus{outline:1px solid #D4AF37;border-color:#D4AF37;}
-.mxb-label{display:block;color:#E8D5C4;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
-.mxb-btn-gold{background:#D4AF37;color:#0B0B0B;border:none;border-radius:4px;padding:9px 18px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
-.mxb-btn-ghost{background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:4px;padding:9px 14px;font-size:11px;cursor:pointer;}
+:root {
+  --bg:        #0B0B0B;
+  --surface:   #141414;
+  --surface2:  #1c1c1c;
+  --border:    #272727;
+  --border2:   #333;
+  --gold:      #D4AF37;
+  --gold-dim:  #9a7e27;
+  --text:      #E8D5C4;
+  --text-mid:  #9a8a7a;
+  --text-dim:  #555;
+  --red:       #c0392b;
+  --green:     #2ecc71;
+  --sidebar-w: 240px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 10;
+}
+.brand {
+  padding: 28px 22px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.brand-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: .5px;
+}
+nav { flex: 1; overflow-y: auto; padding: 14px 0; }
+.nav-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 14px 22px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 22px;
+  color: var(--text-mid);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: color .15s, background .15s, border-color .15s;
+  text-decoration: none;
+  user-select: none;
+}
+.nav-item:hover { color: var(--text); background: var(--surface2); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(212,175,55,.06); font-weight: 500; }
+.nav-icon { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; }
+.sidebar-footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+}
+.preview-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  background: rgba(212,175,55,.1);
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  letter-spacing: .3px;
+  transition: background .15s;
+}
+.preview-btn:hover { background: rgba(212,175,55,.18); }
+
+/* ── Main ── */
+#main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  padding: 40px 48px 80px;
+  max-width: 860px;
+}
+.page-section { display: none; }
+.page-section.active { display: block; }
+
+.section-header { margin-bottom: 28px; }
+.section-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  text-wrap: balance;
+}
+.section-desc {
+  font-size: 12px;
+  color: var(--text-mid);
+  font-weight: 300;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 26px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field { margin-bottom: 18px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-mid);
+  margin-bottom: 7px;
+  letter-spacing: .2px;
+}
+.field input, .field textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 10px 13px;
+  outline: none;
+  resize: vertical;
+  transition: border-color .15s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--gold); }
+.field input::placeholder, .field textarea::placeholder { color: var(--text-dim); }
+.field-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 5px;
+}
+
+/* image preview */
+.img-preview {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-top: 10px;
+  display: none;
+  border: 1px solid var(--border);
+}
+
+/* Save button row */
+.save-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+.btn-save {
+  background: var(--gold);
+  color: #0B0B0B;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  letter-spacing: .3px;
+  transition: opacity .15s;
+}
+.btn-save:hover { opacity: .88; }
+.btn-save:disabled { opacity: .4; cursor: default; }
+.save-status {
+  font-size: 11px;
+  font-weight: 500;
+  min-height: 16px;
+  transition: color .2s;
+}
+.save-status.ok  { color: var(--green); }
+.save-status.err { color: var(--red); }
+.save-status.saving { color: var(--text-dim); }
+
+/* ── PIN overlay ── */
+#pin-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-box {
+  text-align: center;
+  padding: 48px 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 340px;
+}
+.pin-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.pin-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.pin-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  padding: 14px 16px;
+  text-align: center;
+  outline: none;
+  letter-spacing: 6px;
+  margin-bottom: 14px;
+}
+.pin-input:focus { border-color: var(--gold); }
+.pin-btn {
+  width: 100%;
+  background: var(--gold);
+  color: #0B0B0B;
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  letter-spacing: .5px;
+}
+.pin-err {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 10px;
+  min-height: 16px;
+}
+
+/* divider */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+@media (max-width: 700px) {
+  #sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; }
+  #main { margin-left: 0; padding: 24px 18px 60px; }
+}
 </style>
 </head>
 <body>
 
-<!-- ── Toolbar ── -->
-<div id="mxb-toolbar">
-  <span style="color:#D4AF37;font-weight:700;font-size:13px;letter-spacing:1.5px;flex-shrink:0;">✦ MXB EDITOR</span>
-  <span id="mxb-hint" style="color:#555;font-size:11px;"></span>
-  <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0;">
-    <button id="mxb-edit-btn" onclick="toggleEdit()" style="background:#D4AF37;color:#0B0B0B;border:none;border-radius:4px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">✏️ EDITAR PÁGINA</button>
-    <button onclick="openSettings()" style="background:#111;color:#E8D5C4;border:1px solid #2a2a2a;border-radius:4px;padding:7px 13px;font-size:11px;cursor:pointer;">⚙️ URLs &amp; Eventos</button>
-    <a href="/admin" style="background:#111;color:#666;border:1px solid #2a2a2a;border-radius:4px;padding:7px 13px;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;">← Admin</a>
+<!-- ── PIN ── -->
+<div id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-logo">Movies × Brands</div>
+    <div class="pin-sub">Content Studio</div>
+    <input id="pin-inp" class="pin-input" type="password" placeholder="••••••••" autocomplete="off">
+    <button class="pin-btn" onclick="checkPin()">Entrar</button>
+    <div id="pin-err" class="pin-err"></div>
   </div>
 </div>
 
-<!-- ── Portal iframe ── -->
-<iframe id="portal-frame" src="/portal/member" sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-downloads" allow="fullscreen"></iframe>
-
-<!-- ── PIN screen ── -->
-<div id="mxb-pin-screen" style="position:fixed;inset:0;background:#0B0B0B;z-index:99999;display:flex;align-items:center;justify-content:center;">
-  <div style="text-align:center;padding:40px;">
-    <div style="color:#D4AF37;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">✦ MXB EDITOR</div>
-    <div style="color:#666;font-size:13px;margin-bottom:24px;">Introduce tu contraseña de administrador</div>
-    <input id="mxb-pin" type="password" placeholder="Contraseña"
-      style="width:220px;background:#1a1a1a;border:1px solid #D4AF37;border-radius:6px;color:#fff;padding:12px 16px;font-size:16px;text-align:center;outline:none;display:block;margin:0 auto 12px;">
-    <button onclick="checkPin()" class="mxb-btn-gold" style="width:220px;padding:12px;font-size:13px;">ENTRAR</button>
-    <div id="mxb-pin-err" style="color:#e74c3c;font-size:12px;margin-top:10px;"></div>
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div class="brand">
+    <div class="brand-eyebrow">Content Studio</div>
+    <div class="brand-name">Movies × Brands</div>
+  </div>
+  <nav>
+    <div class="nav-section-label">Portal</div>
+    <a class="nav-item active" data-sec="banner" onclick="show('banner')">
+      <span class="nav-icon">📣</span> Announcement Bar
+    </a>
+    <a class="nav-item" data-sec="hub" onclick="show('hub')">
+      <span class="nav-icon">🏠</span> Member Hub
+    </a>
+    <a class="nav-item" data-sec="premium" onclick="show('premium')">
+      <span class="nav-icon">⭐</span> Premium Card
+    </a>
+    <div class="nav-section-label">Evento</div>
+    <a class="nav-item" data-sec="event" onclick="show('event')">
+      <span class="nav-icon">🎭</span> Detalles del Evento
+    </a>
+    <a class="nav-item" data-sec="video" onclick="show('video')">
+      <span class="nav-icon">🎬</span> Vídeo Destacado
+    </a>
+    <div class="nav-section-label">Comercio</div>
+    <a class="nav-item" data-sec="thrivecart" onclick="show('thrivecart')">
+      <span class="nav-icon">🛒</span> ThriveCart Links
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="preview-btn" href="/portal/member" target="_blank">
+      <span>↗</span> Ver el portal
+    </a>
   </div>
 </div>
+
+<!-- ── Main ── -->
+<div id="main">
+
+  <!-- BANNER -->
+  <div id="sec-banner" class="page-section active">
+    <div class="section-header">
+      <div class="section-title">Announcement Bar</div>
+      <div class="section-desc">La barra dorada en la parte superior del portal que ven todos los miembros.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📣 Mensaje del Banner</div>
+      <div class="field">
+        <label>Texto del anuncio</label>
+        <input type="text" id="f-announcement_banner" value="${v('announcement_banner')}" placeholder="Ej: ¡Cannes 2027 ya está abierto! Reserva tu lugar →">
+        <div class="field-hint">Se muestra en la barra superior del portal. Puedes incluir emojis.</div>
+      </div>
+      <div class="field">
+        <label>Mensaje de bienvenida (pop-up)</label>
+        <textarea id="f-welcome_message" rows="3" placeholder="Mensaje que aparece al entrar...">${vt('welcome_message')}</textarea>
+        <div class="field-hint">Mensaje inicial cuando el miembro accede al portal por primera vez.</div>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['announcement_banner','welcome_message'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-banner"></span>
+    </div>
+  </div>
+
+  <!-- HUB -->
+  <div id="sec-hub" class="page-section">
+    <div class="section-header">
+      <div class="section-title">Member Hub</div>
+      <div class="section-desc">Los textos principales de la sección hub del portal.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏠 Textos del Hub</div>
+      <div class="field">
+        <label>Título principal</label>
+        <input type="text" id="f-hub_title" value="${v('hub_title')}" placeholder="Ej: Tu ecosistema creativo">
+      </div>
+      <div class="field">
+        <label>Subtítulo / descripción</label>
+        <textarea id="f-hub_subtitle" rows="3" placeholder="Descripción breve del hub...">${vt('hub_subtitle')}</textarea>
+      </div>
+      <div class="field">
+        <label>Tagline del footer</label>
+        <input type="text" id="f-hub_footer" value="${v('hub_footer')}" placeholder="Ej: Donde el cine y las marcas se encuentran.">
+        <div class="field-hint">Pequeño texto al pie de la sección hub.</div>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['hub_title','hub_subtitle','hub_footer'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-hub"></span>
+    </div>
+  </div>
+
+  <!-- PREMIUM -->
+  <div id="sec-premium" class="page-section">
+    <div class="section-header">
+      <div class="section-title">Premium Card</div>
+      <div class="section-desc">La tarjeta de upgrade a membresía premium y la imagen de la Gala.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">⭐ Upgrade Card</div>
+      <div class="field">
+        <label>Título</label>
+        <input type="text" id="f-premium_title" value="${v('premium_title')}" placeholder="Ej: Accede a la experiencia completa">
+      </div>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="f-premium_desc" rows="3" placeholder="Beneficios de la membresía premium...">${vt('premium_desc')}</textarea>
+      </div>
+      <div class="field">
+        <label>Texto del botón CTA</label>
+        <input type="text" id="f-premium_cta" value="${v('premium_cta')}" placeholder="Ej: Únete ahora →">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🖼️ Imágenes</div>
+      <div class="field">
+        <label>Imagen Hero Premium (URL)</label>
+        <input type="url" id="f-premium_hero_image" value="${v('premium_hero_image')}" placeholder="https://..." oninput="previewImg(this,'prev-hero')">
+        <img id="prev-hero" class="img-preview" src="${v('premium_hero_image')}" onerror="this.style.display='none'" ${cfg['premium_hero_image'] ? "style='display:block'" : ''}>
+        <div class="field-hint">URL pública de la imagen (Cloudinary, Supabase Storage, etc.)</div>
+      </div>
+      <hr class="divider">
+      <div class="field">
+        <label>Imagen Gala (URL)</label>
+        <input type="url" id="f-gala_image" value="${v('gala_image')}" placeholder="https://..." oninput="previewImg(this,'prev-gala')">
+        <img id="prev-gala" class="img-preview" src="${v('gala_image')}" onerror="this.style.display='none'" ${cfg['gala_image'] ? "style='display:block'" : ''}>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['premium_title','premium_desc','premium_cta','premium_hero_image','gala_image'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-premium"></span>
+    </div>
+  </div>
+
+  <!-- EVENT -->
+  <div id="sec-event" class="page-section">
+    <div class="section-header">
+      <div class="section-title">Detalles del Evento</div>
+      <div class="section-desc">La información del próximo evento que se muestra en el portal.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎭 Información del Evento</div>
+      <div class="field">
+        <label>Nombre del evento</label>
+        <input type="text" id="f-event_title" value="${v('event_title')}" placeholder="Ej: Official Gala Movies × Brands · Cannes 2027">
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="text" id="f-event_date" value="${v('event_date')}" placeholder="Ej: 16–17 Mayo 2027">
+      </div>
+      <div class="field">
+        <label>Lugar</label>
+        <input type="text" id="f-event_location" value="${v('event_location')}" placeholder="Ej: Palais des Festivals, Cannes">
+      </div>
+      <div class="field">
+        <label>Precio desde</label>
+        <input type="text" id="f-event_price" value="${v('event_price')}" placeholder="Ej: Desde €490">
+      </div>
+      <div class="field">
+        <label>URL del botón CTA</label>
+        <input type="url" id="f-event_cta_url" value="${v('event_cta_url')}" placeholder="https://...">
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['event_title','event_date','event_location','event_price','event_cta_url'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-event"></span>
+    </div>
+  </div>
+
+  <!-- VIDEO -->
+  <div id="sec-video" class="page-section">
+    <div class="section-header">
+      <div class="section-title">Vídeo Destacado</div>
+      <div class="section-desc">El vídeo de YouTube que se muestra en la sección de contenido del portal.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎬 Vídeo de YouTube</div>
+      <div class="field">
+        <label>URL del vídeo</label>
+        <input type="url" id="f-featured_video_url" value="${v('featured_video_url')}" placeholder="https://youtube.com/watch?v=...">
+        <div class="field-hint">Pega la URL completa de YouTube. El portal lo convierte automáticamente.</div>
+      </div>
+      <div class="field">
+        <label>Título del vídeo</label>
+        <input type="text" id="f-featured_video_title" value="${v('featured_video_title')}" placeholder="Ej: Bienvenida a la temporada 2027">
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['featured_video_url','featured_video_title'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-video"></span>
+    </div>
+  </div>
+
+  <!-- THRIVECART -->
+  <div id="sec-thrivecart" class="page-section">
+    <div class="section-header">
+      <div class="section-title">ThriveCart Links</div>
+      <div class="section-desc">Las URLs de pago para los productos de la Gala y Red Carpet.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🛒 URLs de Pago</div>
+      <div class="field">
+        <label>URL Gala Access (1 y 2 entradas)</label>
+        <input type="url" id="f-thrivecart_gala_url" value="${v('thrivecart_gala_url')}" placeholder="https://soniaboost.thrivecart.com/...">
+        <div class="field-hint">Usada en el botón de compra de entradas para la Gala.</div>
+      </div>
+      <div class="field">
+        <label>URL Red Carpet Experience</label>
+        <input type="url" id="f-thrivecart_redcarpet_url" value="${v('thrivecart_redcarpet_url')}" placeholder="https://soniaboost.thrivecart.com/...">
+        <div class="field-hint">Usada en el botón de compra del paquete Red Carpet.</div>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn-save" onclick="saveSection(['thrivecart_gala_url','thrivecart_redcarpet_url'], this)">Guardar cambios</button>
+      <span class="save-status" id="status-thrivecart"></span>
+    </div>
+  </div>
+
+</div><!-- /main -->
 
 <script>
 var SB_URL='${SB_URL}';
 var SB_KEY='${SB_KEY}';
 var PIN='1234567';
-var EDITABLES=${editablesJson};
-var SETTINGS=${settingsJson};
-var editMode=false;
-var cfg={};
-var popover=null;
 
 // ── PIN ──
-var authed=false;
-try{authed=sessionStorage.getItem('mxb_ed_auth')==='1';}catch(e){}
-if(authed){
-  document.getElementById('mxb-pin-screen').style.display='none';
-  loadCfg();
-}
+;(function(){
+  var ok=false;
+  try{ok=sessionStorage.getItem('mxb_cs_auth')==='1';}catch(e){}
+  if(ok) document.getElementById('pin-overlay').style.display='none';
+  else   document.getElementById('pin-inp').focus();
+})();
 function checkPin(){
-  var v=document.getElementById('mxb-pin').value;
+  var v=document.getElementById('pin-inp').value;
   if(v===PIN){
-    try{sessionStorage.setItem('mxb_ed_auth','1');}catch(e){}
-    document.getElementById('mxb-pin-screen').style.display='none';
-    loadCfg();
+    try{sessionStorage.setItem('mxb_cs_auth','1');}catch(e){}
+    document.getElementById('pin-overlay').style.display='none';
   }else{
-    document.getElementById('mxb-pin-err').textContent='Contraseña incorrecta';
+    document.getElementById('pin-err').textContent='Contraseña incorrecta.';
+    document.getElementById('pin-inp').value='';
+    document.getElementById('pin-inp').focus();
   }
 }
-document.getElementById('mxb-pin').addEventListener('keydown',function(e){if(e.key==='Enter')checkPin();});
+document.getElementById('pin-inp').addEventListener('keydown',function(e){if(e.key==='Enter')checkPin();});
 
-// ── Load config from Supabase ──
-function loadCfg(){
-  var keys=${JSON.stringify(CONFIG_KEYS)};
-  fetch(SB_URL+'/rest/v1/mxb_config?key=in.('+keys.join(',')+')',{
-    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-  }).then(function(r){return r.json();}).then(function(rows){
-    if(Array.isArray(rows))rows.forEach(function(r){cfg[r.key]=r.value||'';});
-  }).catch(function(){});
+// ── Nav ──
+function show(sec){
+  document.querySelectorAll('.page-section').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('sec-'+sec).classList.add('active');
+  document.querySelector('[data-sec="'+sec+'"]').classList.add('active');
 }
 
-// ── Edit mode toggle ──
-function toggleEdit(){
-  editMode=!editMode;
-  var btn=document.getElementById('mxb-edit-btn');
-  var hint=document.getElementById('mxb-hint');
-  if(editMode){
-    btn.style.background='#6b4f0e';btn.style.color='#fff';
-    btn.textContent='✕ Salir edición';
-    hint.textContent='Pasa el ratón por los elementos y haz clic para editar';
-    hint.style.color='#D4AF37';
-    activateFrame();
-  }else{
-    btn.style.background='#D4AF37';btn.style.color='#0B0B0B';
-    btn.textContent='✏️ EDITAR PÁGINA';
-    hint.textContent='';
-    deactivateFrame();
-    closePopover();
-  }
+// ── Image preview ──
+function previewImg(inp,previewId){
+  var img=document.getElementById(previewId);
+  if(!inp.value.trim()){img.style.display='none';return;}
+  img.src=inp.value.trim();
+  img.style.display='block';
+  img.onerror=function(){this.style.display='none';};
 }
 
-// ── Inject editing into iframe DOM (same-origin) ──
-function getFrameDoc(){
-  var f=document.getElementById('portal-frame');
-  try{return f.contentDocument||f.contentWindow.document;}catch(e){return null;}
-}
+// ── Save ──
+function saveSection(keys, btn){
+  var statusId='status-'+btn.closest('.page-section').id.replace('sec-','');
+  var status=document.getElementById(statusId);
+  btn.disabled=true;
+  status.textContent='Guardando...';
+  status.className='save-status saving';
 
-function activateFrame(){
-  var doc=getFrameDoc();
-  if(!doc){setTimeout(activateFrame,500);return;}
-
-  // Inject style
-  if(!doc.getElementById('mxb-ed-style')){
-    var s=doc.createElement('style');
-    s.id='mxb-ed-style';
-    s.textContent='.mxb-editable{outline:2px dashed #D4AF37!important;outline-offset:3px!important;cursor:pointer!important;position:relative!important;transition:outline-color .2s;}.mxb-editable::after{content:attr(data-mxb-label);position:absolute;top:0;left:0;background:#D4AF37;color:#0B0B0B;font-size:9px;font-weight:700;padding:2px 6px;letter-spacing:.5px;font-family:Arial,sans-serif;pointer-events:none;white-space:nowrap;z-index:9990;display:none;}.mxb-editable:hover::after{display:block;}';
-    doc.head.appendChild(s);
-  }
-
-  // Tag elements
-  setTimeout(function(){
-    EDITABLES.forEach(function(def){
-      def.selectors.forEach(function(sel){
-        doc.querySelectorAll(sel).forEach(function(el){
-          el.classList.add('mxb-editable');
-          el.setAttribute('data-mxb-key',def.key);
-          el.setAttribute('data-mxb-type',def.type);
-          el.setAttribute('data-mxb-label','✏️ '+def.label);
-          el.addEventListener('click',onFrameClick,true);
-        });
-      });
-    });
-  },800);
-}
-
-function deactivateFrame(){
-  var doc=getFrameDoc();
-  if(!doc)return;
-  doc.querySelectorAll('.mxb-editable').forEach(function(el){
-    el.classList.remove('mxb-editable');
-    el.removeEventListener('click',onFrameClick,true);
-  });
-}
-
-function onFrameClick(e){
-  if(!editMode)return;
-  e.preventDefault();e.stopPropagation();
-  var el=e.currentTarget;
-  openPopover(el.getBoundingClientRect(),el.getAttribute('data-mxb-key'),el.getAttribute('data-mxb-type'),el.getAttribute('data-mxb-label').replace('✏️ ',''));
-}
-
-// ── Popover ──
-function openPopover(rect,key,type,label){
-  closePopover();
-  var currentVal=cfg[key]||'';
-  var p=document.createElement('div');
-  p.id='mxb-popover';
-
-  var inp='';
-  if(type==='textarea'){
-    inp='<textarea id="mxb-pop-inp" class="mxb-inp" rows="4" style="margin-top:0;">'+esc(currentVal)+'</textarea>';
-  }else if(type==='image'){
-    inp='<input id="mxb-pop-inp" class="mxb-inp" type="url" placeholder="https://..." value="'+esc(currentVal)+'">'
-      +(currentVal?'<img src="'+esc(currentVal)+'" style="width:100%;margin-top:8px;border-radius:4px;max-height:90px;object-fit:cover;" onerror="this.style.display=\'none\'">':'')
-      +'<p style="color:#555;font-size:10px;margin-top:5px;">URL pública de la imagen</p>';
-  }else{
-    inp='<input id="mxb-pop-inp" class="mxb-inp" type="text" value="'+esc(currentVal)+'">';
-  }
-
-  p.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
-    +'<span style="color:#D4AF37;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">'+esc(label)+'</span>'
-    +'<button onclick="closePopover()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;padding:0;line-height:1;">×</button>'
-    +'</div>'
-    +inp
-    +'<div style="display:flex;gap:8px;margin-top:12px;">'
-      +'<button onclick="saveField(\''+key+'\')" class="mxb-btn-gold" style="flex:1;">💾 GUARDAR</button>'
-      +'<button onclick="closePopover()" class="mxb-btn-ghost">Cancelar</button>'
-    +'</div>'
-    +'<span id="mxb-pop-msg" style="display:block;font-size:11px;margin-top:8px;min-height:14px;"></span>';
-
-  // position relative to iframe (offset by 50px toolbar)
-  var frameTop=50;
-  var top=frameTop+rect.bottom+8;
-  if(top+300>window.innerHeight)top=Math.max(58,frameTop+rect.top-300);
-  var left=Math.max(8,Math.min(rect.left,window.innerWidth-360));
-  p.style.top=top+'px';
-  p.style.left=left+'px';
-  document.body.appendChild(p);
-  popover=p;
-  var i=document.getElementById('mxb-pop-inp');
-  if(i){i.focus();if(i.select)i.select();}
-}
-
-function closePopover(){if(popover){popover.remove();popover=null;}}
-
-function saveField(key){
-  var inp=document.getElementById('mxb-pop-inp');
-  if(!inp)return;
-  var val=inp.value.trim();
-  var msg=document.getElementById('mxb-pop-msg');
-  if(msg){msg.textContent='Guardando...';msg.style.color='#888';}
-  cfg[key]=val;
-  fetch(SB_URL+'/rest/v1/mxb_config',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates'},
-    body:JSON.stringify({key:key,value:val,updated_at:new Date().toISOString()})
-  }).then(function(r){
-    if(r.ok){
-      if(msg){msg.textContent='✓ Guardado';msg.style.color='#4caf50';}
-      applyLive(key,val);
-      setTimeout(closePopover,900);
-    }else{
-      if(msg){msg.textContent='❌ Error al guardar';msg.style.color='#e74c3c';}
-    }
-  }).catch(function(){
-    if(msg){msg.textContent='❌ Sin conexión';msg.style.color='#e74c3c';}
-  });
-}
-
-function applyLive(key,val){
-  var doc=getFrameDoc();
-  if(!doc)return;
-  function setQ(sel){doc.querySelectorAll(sel).forEach(function(el){el.textContent=val;});}
-  function setId(id){var el=doc.getElementById(id);if(el)el.textContent=val;}
-  function setSrc(id){var el=doc.getElementById(id);if(el)el.src=val;}
-  switch(key){
-    case 'hub_title': setQ('.mhv-title'); break;
-    case 'hub_subtitle': setQ('.mhv-sub'); break;
-    case 'hub_footer': setQ('.hub-footer-tagline'); break;
-    case 'announcement_banner':
-      var bar=doc.getElementById('mxb-announcement-bar');
-      if(bar){var sp=bar.querySelector('span');if(sp)sp.textContent=val;}
-      break;
-    case 'premium_title': setId('hubPremiumUpgradeTitle'); break;
-    case 'premium_desc':  setId('hubPremiumUpgradeDesc'); break;
-    case 'premium_cta':   setId('hubPremiumUpgradeCta'); break;
-    case 'premium_hero_image': setSrc('hubPremiumUpgradeImage'); setSrc('premiumHeroImageV45'); break;
-    case 'gala_image': setSrc('premiumGalaImage'); break;
-  }
-}
-
-// ── Settings modal ──
-function openSettings(){
-  closePopover();
-  if(document.getElementById('mxb-modal-bg'))return;
-  var rows=SETTINGS.map(function(f){
-    var v=cfg[f.key]||'';
-    var inp=f.type==='textarea'
-      ?'<textarea id="mxbs-'+f.key+'" class="mxb-inp" rows="2">'+esc(v)+'</textarea>'
-      :'<input id="mxbs-'+f.key+'" class="mxb-inp" type="text" value="'+esc(v)+'">';
-    return '<div style="margin-bottom:14px;"><label class="mxb-label">'+esc(f.label)+'</label>'+inp+'</div>';
-  }).join('');
-
-  var bg=document.createElement('div');
-  bg.id='mxb-modal-bg';
-  bg.innerHTML='<div id="mxb-modal">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
-      +'<span style="color:#D4AF37;font-size:14px;font-weight:700;">⚙️ URLs &amp; Eventos</span>'
-      +'<button onclick="document.getElementById(\'mxb-modal-bg\').remove()" style="background:none;border:none;color:#666;font-size:22px;cursor:pointer;line-height:1;">×</button>'
-    +'</div>'
-    +rows
-    +'<div style="display:flex;gap:10px;margin-top:4px;">'
-      +'<button onclick="saveSettings()" class="mxb-btn-gold" style="flex:1;">💾 GUARDAR TODO</button>'
-      +'<button onclick="document.getElementById(\'mxb-modal-bg\').remove()" class="mxb-btn-ghost">Cancelar</button>'
-    +'</div>'
-    +'<span id="mxbs-msg" style="display:block;font-size:11px;margin-top:10px;min-height:14px;text-align:center;"></span>'
-  +'</div>';
-  document.body.appendChild(bg);
-}
-
-function saveSettings(){
-  var keys=SETTINGS.map(function(f){return f.key;});
-  var msg=document.getElementById('mxbs-msg');
-  if(msg){msg.textContent='Guardando...';msg.style.color='#888';}
-  Promise.all(keys.map(function(k){
-    var el=document.getElementById('mxbs-'+k);
+  var writes=keys.map(function(k){
+    var el=document.getElementById('f-'+k);
     var val=el?el.value.trim():'';
-    cfg[k]=val;
     return fetch(SB_URL+'/rest/v1/mxb_config',{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates'},
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Prefer':'resolution=merge-duplicates'
+      },
       body:JSON.stringify({key:k,value:val,updated_at:new Date().toISOString()})
     });
-  })).then(function(){
-    if(msg){msg.textContent='✓ Todo guardado correctamente';msg.style.color='#4caf50';}
-    setTimeout(function(){var m=document.getElementById('mxb-modal-bg');if(m)m.remove();},1200);
+  });
+
+  Promise.all(writes).then(function(results){
+    var ok=results.every(function(r){return r.ok;});
+    btn.disabled=false;
+    if(ok){
+      status.textContent='✓ Guardado correctamente';
+      status.className='save-status ok';
+    }else{
+      status.textContent='✗ Error al guardar';
+      status.className='save-status err';
+    }
+    setTimeout(function(){status.textContent='';status.className='save-status';},3500);
   }).catch(function(){
-    if(msg){msg.textContent='❌ Error al guardar';msg.style.color='#e74c3c';}
+    btn.disabled=false;
+    status.textContent='✗ Sin conexión';
+    status.className='save-status err';
+    setTimeout(function(){status.textContent='';status.className='save-status';},3500);
   });
 }
-
-// Close popover on outside click
-document.addEventListener('click',function(e){
-  if(popover&&!popover.contains(e.target))closePopover();
-});
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){closePopover();}});
-
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 </body>
 </html>`
