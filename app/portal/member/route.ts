@@ -9,6 +9,20 @@ export const dynamic = 'force-dynamic'
 let _cache: { html: string; ts: number } | null = null
 const CACHE_TTL = 5 * 60 * 1000
 
+const MOBILE_INJECT = `<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box!important}
+body{overflow-x:hidden!important}
+img,video,iframe{max-width:100%!important}
+@media(max-width:768px){
+  body{font-size:14px!important}
+  [style*="width:"]{max-width:100%!important}
+  table{width:100%!important;display:block!important;overflow-x:auto!important}
+  .sidebar,.nav-sidebar,[class*="sidebar"]{width:100%!important;position:relative!important}
+  [class*="modal"],[class*="panel"]{width:100vw!important;max-width:100vw!important;left:0!important;right:0!important}
+}
+</style>`
+
 const CONFIG_KEYS = [
   'announcement_banner',
   'welcome_message',
@@ -44,6 +58,7 @@ export async function GET() {
   }
 
   let html = fs.readFileSync(path.join(process.cwd(), 'html', 'portal-member.html'), 'utf-8')
+  html = html.replace('<head>', '<head>' + MOBILE_INJECT)
 
   // Fetch live config from Supabase
   const cfg: Record<string, string> = {}

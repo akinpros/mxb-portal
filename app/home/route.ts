@@ -4,6 +4,21 @@ import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
+const MOBILE_INJECT = `<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* Mobile responsiveness overrides */
+*{box-sizing:border-box!important}
+body{overflow-x:hidden!important}
+img,video,iframe{max-width:100%!important}
+#mxbFrame{width:100%!important;height:100vh!important;border:none!important;display:block!important}
+@media(max-width:768px){
+  body{font-size:14px!important}
+  [style*="width:"]{max-width:100%!important}
+  [style*="position:fixed"]{max-width:100vw!important}
+  table{width:100%!important;display:block!important;overflow-x:auto!important}
+}
+</style>`
+
 const PROFILE_URL_INJECT = `<script>
 (function(){
   // After the iframe content loads, override mxbOpenProfile to navigate to real profile URL
@@ -29,6 +44,7 @@ const PROFILE_URL_INJECT = `<script>
 
 export async function GET() {
   let html = fs.readFileSync(path.join(process.cwd(), 'html', 'portal-home.html'), 'utf-8')
+  html = html.replace('<head>', '<head>' + MOBILE_INJECT)
   html = html.replace('</body>', PROFILE_URL_INJECT + '</body>')
   return new NextResponse(html, {
     headers: {
