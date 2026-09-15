@@ -1,8 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Partner, Message, Reward, RedemptionRequest, Announcement, Producer, Distributor } from '@/lib/types'
+import ProspectosTab, { type Prospect } from '../dashboard/ProspectosTab'
+import PowerListTab, { type PLEntry, type PLRequest } from './PowerListTab'
+import {
+  InstitutionsTab, CommunicationsTab, LaPreguntaTab, OfficialContentTab,
+  OpportunitiesTab, PremiumExperiencesTab, AcademyTab, PDFDocsTab,
+  FOVAdminTab, CommunityTab,
+  SelMembersTab, BrandLeadsTab, NotificationsTab, VisibilityTab,
+  SecurityLogTab, AdminRolesTab, CreditsTab, PortalSettingsTab,
+} from './ExtraAdminTabs'
 
 const G = '#D4AF37'
 const CH = '#E8D5C4'
@@ -11,7 +21,7 @@ const PANEL = '#161616'
 const LINE = '#2c2c2c'
 const DANGER = '#c0392b'
 
-type AdminTab = 'partners' | 'pipeline' | 'announcements' | 'messages' | 'rewards' | 'redemptions' | 'producers' | 'distributors' | 'value' | 'config'
+type AdminTab = 'home' | 'partners' | 'pipeline' | 'announcements' | 'messages' | 'rewards' | 'redemptions' | 'producers' | 'distributors' | 'value' | 'config' | 'content' | 'prospectos' | 'awards' | 'powerlist' | 'institutions' | 'communications' | 'question' | 'official' | 'opportunities' | 'premium' | 'academy' | 'docs' | 'fov' | 'lacroisette' | 'community' | 'sel_members' | 'brand_leads' | 'notifications' | 'visibility' | 'security_log' | 'crm' | 'action_center' | 'workflows' | 'finance' | 'tasks' | 'bulk' | 'events' | 'templates' | 'media_library' | 'reports' | 'calendar' | 'security_ops' | 'banners' | 'member_hub' | 'spaces' | 'admins' | 'admin_roles' | 'credits' | 'portal_settings'
 
 type Project = {
   id: string
@@ -40,6 +50,15 @@ interface Props {
   producers: Producer[]
   distributors: Distributor[]
   config: Record<string, string>
+  prospects: Prospect[]
+  producerMessages: { id: string; sender: string; body: string; created_at: string; mxb_producers?: { contact_name: string; company_name: string | null } | null }[]
+  distributorMessages: { id: string; sender: string; body: string; created_at: string; mxb_distributors?: { contact_name: string; company_name: string | null } | null }[]
+  awardsMembers: { id: string; contact_name: string; surname: string | null; brand: string | null; email: string; editions: { cannes?: boolean; berlinale?: boolean } | null; approved: boolean; synopsis: string | null; trailer_link: string | null; video_url: string | null; created_at: string }[]
+  awardsAnnouncements: { id: string; title: string; message: string; created_at: string }[]
+  awardsResources: { id: string; section: string; body: string | null; youtube_link: string | null; sort_order: number }[]
+  awardsRequirements: { id: string; title: string | null; body: string; sort_order: number }[]
+  powerListEntries: PLEntry[]
+  powerListRequests: PLRequest[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -67,8 +86,13 @@ export default function AdminClient({
   partners: initPartners, projects: initProjects, announcements: initAnn,
   messages, rewards: initRewards, redemptions: initRedemptions,
   producers: initProducers, distributors: initDistributors, config: initConfig,
+  prospects: initProspects, producerMessages, distributorMessages,
+  awardsMembers: initAwardsMembers, awardsAnnouncements: initAwardsAnn,
+  awardsResources: initAwardsRes, awardsRequirements: initAwardsReq,
+  powerListEntries, powerListRequests,
 }: Props) {
-  const [tab, setTab] = useState<AdminTab>('partners')
+  const [tab, setTab] = useState<AdminTab>('home')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [partners, setPartners] = useState(initPartners)
   const [projects, setProjects] = useState(initProjects)
   const [announcements, setAnnouncements] = useState(initAnn)
@@ -144,6 +168,69 @@ export default function AdminClient({
   const [rvAdding, setRvAdding] = useState(false)
   const [rvMsg, setRvMsg] = useState('')
 
+  // --- Announcement edit ---
+  const [editAnnId, setEditAnnId] = useState<string | null>(null)
+  const [editAnnTitle, setEditAnnTitle] = useState('')
+  const [editAnnBody, setEditAnnBody] = useState('')
+  const [editAnnPinned, setEditAnnPinned] = useState(false)
+  const [editAnnCategory, setEditAnnCategory] = useState('general')
+  const [editAnnSaving, setEditAnnSaving] = useState(false)
+
+  // --- Content state ---
+  type CardItem = { icon?: string; title: string; desc: string; img?: string; date?: string; href?: string; who?: string; what?: string }
+  const parseJSON = (s: string, fallback: unknown) => { try { return JSON.parse(s) } catch { return fallback } }
+  const [ctHeroTagline, setCtHeroTagline] = useState(initConfig['hero_tagline'] ?? 'Hay marcas destinadas a dejar huella')
+  const [ctHeroSubtitle, setCtHeroSubtitle] = useState(initConfig['hero_subtitle'] ?? 'Edición 2027 · Cannes & Berlinale')
+  const [ctBenefitsQuote, setCtBenefitsQuote] = useState(initConfig['benefits_quote'] ?? '')
+  const [ctBenefitCards, setCtBenefitCards] = useState<CardItem[]>(parseJSON(initConfig['benefit_cards'] ?? '[]', []))
+  const [ctAwardsTimeline, setCtAwardsTimeline] = useState<CardItem[]>(parseJSON(initConfig['awards_timeline'] ?? '[]', []))
+  const [ctAwardsPalmares, setCtAwardsPalmares] = useState<CardItem[]>(parseJSON(initConfig['awards_palmares'] ?? '[]', []))
+  const [ctAwardsLegacy, setCtAwardsLegacy] = useState<CardItem[]>(parseJSON(initConfig['awards_legacy'] ?? '[]', []))
+  const [ctEcosystemCards, setCtEcosystemCards] = useState<CardItem[]>(parseJSON(initConfig['ecosystem_cards'] ?? '[]', []))
+  const [ctCannesPhotos, setCtCannesPhotos] = useState<string[]>(parseJSON(initConfig['cannes_photos'] ?? '[]', []))
+  const [ctSaving, setCtSaving] = useState(false)
+  const [ctMsg, setCtMsg] = useState('')
+  const [ctSection, setCtSection] = useState<string>('hero')
+
+  async function saveContent(key: string, value: unknown) {
+    setCtSaving(true); setCtMsg('')
+    const { error } = await supabase.from('mxb_content').upsert({ key, value: typeof value === 'string' ? value : JSON.stringify(value), type: typeof value === 'string' ? 'text' : 'json' }, { onConflict: 'key' })
+    if (error) setCtMsg('Error: ' + error.message)
+    else setCtMsg('✓ Guardado correctamente')
+    setCtSaving(false)
+    setTimeout(() => setCtMsg(''), 3000)
+  }
+
+  function uploadImgToCard<T extends CardItem>(list: T[], idx: number, setter: (v: T[]) => void) {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]; if (!file) return
+      const reader = new FileReader()
+      reader.onload = ev => {
+        const src = ev.target?.result as string
+        setter(list.map((c, i) => i === idx ? { ...c, img: src } : c) as T[])
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  }
+
+  function uploadPhotoSlot(idx: number) {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]; if (!file) return
+      const reader = new FileReader()
+      reader.onload = ev => {
+        const src = ev.target?.result as string
+        setCtCannesPhotos(prev => prev.map((p, i) => i === idx ? src : p))
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  }
+
   // --- Config state ---
   const [cfgAiBoost, setCfgAiBoost] = useState(initConfig['ai_boost_enabled'] === 'true')
   const [cfgDevEmail, setCfgDevEmail] = useState(initConfig['dev_email'] ?? '')
@@ -161,6 +248,35 @@ export default function AdminClient({
   })
   const [cfgSaving, setCfgSaving] = useState(false)
   const [cfgMsg, setCfgMsg] = useState('')
+
+  // --- Awards state ---
+  const [awardsMembers, setAwardsMembers] = useState(initAwardsMembers)
+  const [awardsAnn, setAwardsAnn] = useState(initAwardsAnn)
+  const [awardsRes, setAwardsRes] = useState(initAwardsRes)
+  const [awardsReq, setAwardsReq] = useState(initAwardsReq)
+  const [awAnnTitle, setAwAnnTitle] = useState('')
+  const [awAnnMsg, setAwAnnMsg] = useState('')
+  const [awResSection, setAwResSection] = useState('')
+  const [awResBody, setAwResBody] = useState('')
+  const [awResYt, setAwResYt] = useState('')
+  const [awReqTitle, setAwReqTitle] = useState('')
+  const [awReqBody, setAwReqBody] = useState('')
+  const [awPrivMsg, setAwPrivMsg] = useState('')
+  const [awPrivAudience, setAwPrivAudience] = useState<'all' | 'cannes' | 'berlinale'>('all')
+  const [awCannesOpens, setAwCannesOpens] = useState(initConfig['awards_cannes_opens'] ?? '')
+  const [awCannesCloses, setAwCannesCloses] = useState(initConfig['awards_cannes_closes'] ?? '')
+  const [awCannesNotes, setAwCannesNotes] = useState(initConfig['awards_cannes_notes'] ?? '')
+  const [awBerlOpens, setAwBerlOpens] = useState(initConfig['awards_berlinale_opens'] ?? '')
+  const [awBerlCloses, setAwBerlCloses] = useState(initConfig['awards_berlinale_closes'] ?? '')
+  const [awBerlNotes, setAwBerlNotes] = useState(initConfig['awards_berlinale_notes'] ?? '')
+  const [awMsg, setAwMsg] = useState('')
+
+  // --- Notification bell ---
+  const [notifCount, setNotifCount] = useState(0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    supabase.from('mxb_admin_notifications').select('id', { count: 'exact', head: true }).eq('unread', true).then(({ count }) => setNotifCount(count ?? 0))
+  }, [])
 
   // Stats
   const activePartners = partners.filter(p => p.status === 'active').length
@@ -253,6 +369,25 @@ export default function AdminClient({
   async function deleteAnnouncement(id: string) {
     await supabase.from('mxb_announcements').delete().eq('id', id)
     setAnnouncements(prev => prev.filter(a => a.id !== id))
+  }
+
+  function startEditAnn(a: { id: string; title: string; body: string; pinned: boolean; category: string }) {
+    setEditAnnId(a.id)
+    setEditAnnTitle(a.title)
+    setEditAnnBody(a.body)
+    setEditAnnPinned(a.pinned)
+    setEditAnnCategory(a.category)
+  }
+
+  async function saveEditAnn() {
+    if (!editAnnId) return
+    setEditAnnSaving(true)
+    const { data } = await supabase.from('mxb_announcements')
+      .update({ title: editAnnTitle, body: editAnnBody, pinned: editAnnPinned, category: editAnnCategory })
+      .eq('id', editAnnId).select().single()
+    if (data) setAnnouncements(prev => prev.map(a => a.id === editAnnId ? { ...a, ...data } : a))
+    setEditAnnId(null)
+    setEditAnnSaving(false)
   }
 
   async function updateRedemption(id: string, status: 'approved' | 'rejected') {
@@ -378,32 +513,429 @@ export default function AdminClient({
     fontFamily: 'Georgia,serif', fontWeight: 600,
   })
 
+  const sideBtn = (t: AdminTab, icon: string, label: string) => (
+    <button key={t} onClick={() => { setTab(t); setSidebarOpen(false) }} style={{
+      width: '100%', border: 0, background: tab === t ? 'linear-gradient(90deg,#E7B04C,#D79627)' : 'transparent',
+      color: tab === t ? '#111' : '#f3f3f3', textAlign: 'left', padding: '9px 11px', borderRadius: 6,
+      cursor: 'pointer', fontSize: 12, display: 'flex', gap: 10, alignItems: 'center', margin: '1px 0',
+      fontFamily: 'Arial,sans-serif', fontWeight: tab === t ? 700 : 400,
+    }}>
+      <span style={{ width: 18, textAlign: 'center', fontSize: 14 }}>{icon}</span>{label}
+    </button>
+  )
+  const sideGroup = (label: string) => (
+    <div key={label} style={{ fontSize: 10, color: '#E9B72D', textTransform: 'uppercase', letterSpacing: '.06em', margin: '18px 8px 7px', fontFamily: 'Arial,sans-serif' }}>{label}</div>
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'Georgia,serif', color: '#fff' }}>
-      {/* Admin bar */}
-      <div style={{ background: '#1a1408', borderBottom: `1px solid ${G}`, padding: '10px 22px', textAlign: 'center', fontSize: 10, letterSpacing: '.28em', textTransform: 'uppercase', color: G }}>
-        ⚙ Modo Administración — Sonia Boost · The Wonder World Group
-      </div>
+    <div style={{ minHeight: '100vh', background: '#FBFBFA', fontFamily: 'Arial,Helvetica,sans-serif', color: '#151515', paddingLeft: 240 }}>
+      <style>{`
+        @media(max-width:1100px){
+          .mxb-admin-shell{padding-left:0!important;}
+          .mxb-sidebar-v16{transform:translateX(-100%)!important;transition:.2s;}
+          .mxb-sidebar-v16.open{transform:none!important;}
+          .mxb-topbar-v16{left:0!important;}
+        }
+        @media(max-width:700px){
+          .mxb-admin-content{padding:86px 12px 24px!important;}
+        }
+      `}</style>
 
-      {/* Nav */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(11,11,11,.97)', borderBottom: `1px solid ${LINE}`, padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontSize: 15, letterSpacing: '.28em', color: G, fontWeight: 300 }}>MXB · ADMIN</div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {navBtn('partners', 'Partners & Puntos')}
-          {navBtn('pipeline', 'Pipeline')}
-          {navBtn('producers', 'Productores')}
-          {navBtn('distributors', 'Distribuidoras')}
-          {navBtn('announcements', 'Anuncios')}
-          {navBtn('messages', 'Mensajes')}
-          {navBtn('rewards', 'Recompensas')}
-          {navBtn('redemptions', `Solicitudes${unreadRedemptions > 0 ? ` (${unreadRedemptions})` : ''}`)}
-          {navBtn('value', 'Análisis de Valor')}
-          {navBtn('config', 'Configuración')}
-          <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Georgia,serif', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: '#e07060', padding: '8px 4px' }}>Salir</button>
+      {/* SIDEBAR */}
+      <aside className={`mxb-sidebar-v16${sidebarOpen ? ' open' : ''}`} style={{
+        position: 'fixed', left: 0, top: 0, bottom: 0, width: 240,
+        background: '#050505', color: 'white', zIndex: 1200,
+        padding: '22px 14px 18px', overflowY: 'auto', borderRight: '1px solid #151515',
+      }}>
+        <div style={{ fontFamily: "Georgia,'Times New Roman',serif", color: '#E4B13E', fontSize: 28, lineHeight: .9, letterSpacing: '.03em', padding: '0 20px 18px', borderBottom: '1px solid #35250f', marginBottom: 14 }}>
+          MOVIES ×<br />BRANDS<div style={{ fontFamily: 'Arial,sans-serif', fontSize: 10, letterSpacing: '.18em', marginTop: 12, textAlign: 'center', color: '#E4B13E' }}>ADMIN</div>
         </div>
-      </nav>
 
-      <div style={{ maxWidth: 1150, margin: '0 auto', padding: '38px 22px 80px' }}>
+        {sideBtn('home', '⌂', 'Inicio')}
+        {sideBtn('visibility', '👁', 'Visibilidad del Portal')}
+
+        {sideGroup('Personas & Organizaciones')}
+        {sideBtn('sel_members', '♙', 'Members (Competición)')}
+        {sideBtn('crm', '▦', 'CRM · Base de datos')}
+        {sideBtn('partners', '☆', 'Brand Partners')}
+        {sideBtn('institutions', '▥', 'Instituciones & Agencias')}
+        {sideBtn('producers', '▰', 'Productores')}
+
+        {sideGroup('Proyectos & Gestión')}
+        {sideBtn('pipeline', '🎬', 'Proyectos cinematográficos')}
+
+        {sideGroup('Centro de Operaciones')}
+        {sideBtn('action_center', '⚡', 'Centro de acción')}
+        {sideBtn('workflows', '↻', 'Automatizaciones')}
+        {sideBtn('finance', '€', 'Finanzas & Contratos')}
+        {sideBtn('tasks', '✓', 'Tareas & Responsables')}
+        {sideBtn('bulk', '☷', 'Acciones masivas')}
+        {sideBtn('events', '◆', 'Cannes & Berlinale')}
+        {sideBtn('templates', '▤', 'Plantillas')}
+        {sideBtn('media_library', '▧', 'Biblioteca de materiales')}
+        {sideBtn('reports', '↗', 'Informes automáticos')}
+        {sideBtn('calendar', '▣', 'Calendario editorial')}
+        {sideBtn('security_ops', '🔐', 'Seguridad & Restauración')}
+
+        {sideGroup('Comunidad & Contenido')}
+        {sideBtn('community', '◉', 'Community')}
+        {sideBtn('communications', '✉', 'Comunicaciones')}
+        {sideBtn('question', '?', 'La Pregunta')}
+        {sideBtn('official', '▣', 'Contenido Oficial')}
+        {sideBtn('banners', '▧', 'Banners e imágenes')}
+        {sideBtn('opportunities', '★', 'Oportunidades')}
+        {sideBtn('premium', '✦', 'Experiencias Premium')}
+        {sideBtn('member_hub', '◈', 'Member Hub')}
+        {sideBtn('fov', '◍', 'Future of Voices')}
+        {sideBtn('lacroisette', '♕', 'La Croisette')}
+        {sideBtn('announcements', '⚑', 'Anuncios')}
+
+        {sideGroup('Formación')}
+        {sideBtn('academy', '◇', 'AI Academy')}
+        {sideBtn('spaces', '▧', 'Espacios')}
+
+        {sideGroup('Recursos')}
+        {sideBtn('docs', '▱', 'Documentos PDF')}
+
+        {sideGroup('Sistema')}
+        {sideBtn('value', '⭐', 'Créditos')}
+        {sideBtn('portal_settings', '✦', 'Portal Settings')}
+        {sideBtn('admins', '♢', 'Admins & Roles')}
+        {sideBtn('config', '⚙', 'Configuración')}
+        {sideBtn('content', '✏', 'Contenido')}
+
+        <div style={{ border: '1px solid #3f3217', borderRadius: 7, padding: '10px 12px', marginTop: 22, fontSize: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span>ⓘ</span>Ayuda & Soporte
+        </div>
+      </aside>
+
+      {/* TOPBAR */}
+      <header style={{
+        position: 'fixed', left: 240, right: 0, top: 0, height: 70,
+        background: 'rgba(255,255,255,.97)', zIndex: 1100,
+        borderBottom: '1px solid #E8E4DD', display: 'flex',
+        alignItems: 'center', justifyContent: 'space-between', padding: '0 26px', backdropFilter: 'blur(8px)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <button onClick={() => setSidebarOpen(s => !s)} style={{ fontSize: 22, background: 'none', border: 0, cursor: 'pointer' }}>☰</button>
+          <input placeholder="⌕  Buscar en Movies × Brands..." style={{ width: 365, border: '1px solid #E8E4DD', borderRadius: 7, padding: '11px 14px', fontSize: 13, background: 'white' }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <button onClick={() => setTab('notifications')} style={{ position: 'relative', fontSize: 18, background: 'none', border: 0, cursor: 'pointer' }}>
+            🔔
+            {notifCount > 0 && <span style={{ position: 'absolute', right: -9, top: -8, background: '#C98920', color: 'white', borderRadius: 12, fontSize: 9, padding: '2px 5px' }}>{notifCount > 99 ? '99+' : notifCount}</span>}
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#222', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>SB</div>
+            <div><div style={{ fontSize: 12, fontWeight: 700 }}>Sonia Boost</div><div style={{ color: '#555', marginTop: 2 }}>Super Admin</div></div>
+          </div>
+          <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: DANGER, fontFamily: 'inherit' }}>Salir</button>
+        </div>
+      </header>
+
+      <div className="mxb-admin-content" style={{ maxWidth: 1500, margin: '0 auto', padding: '94px 24px 36px' }}>
+
+        {/* ===== HOME DASHBOARD ===== */}
+        {tab === 'home' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <h2 style={{ fontFamily: "Georgia,'Times New Roman',serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Bienvenida, Sonia 👋</h2>
+                <p style={{ fontSize: 13, color: '#343434' }}>Resumen general de la actividad del ecosistema Movies × Brands.</p>
+              </div>
+            </div>
+            {/* KPI row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 14, margin: '18px 0 20px' }}>
+              {[
+                { icon: '🤝', label: 'Partners activos', value: activePartners, trend: '' },
+                { icon: '⏳', label: 'Pendientes', value: pendingPartners, trend: '' },
+                { icon: '⭐', label: 'Boost Credits', value: totalPoints, trend: '' },
+                { icon: '🎟️', label: 'Canjes pendientes', value: unreadRedemptions, trend: '' },
+                { icon: '🎬', label: 'Productoras', value: producers.length, trend: '' },
+                { icon: '📣', label: 'Anuncios activos', value: announcements.length, trend: '' },
+              ].map(k => (
+                <div key={k.label} style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 16, minHeight: 112 }}>
+                  <div style={{ fontSize: 22, color: '#D98700' }}>{k.icon}</div>
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', marginTop: 6, color: '#303030' }}>{k.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#111', marginTop: 4 }}>{k.value}</div>
+                </div>
+              ))}
+            </div>
+            {/* Home grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: 18 }}>
+              <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 18 }}>
+                <h3 style={{ fontFamily: "Georgia,serif", fontSize: 17, marginBottom: 12 }}>Requiere tu atención</h3>
+                {unreadRedemptions > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: '1px solid #EEEAE4', fontSize: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#FFF1DA', color: '#C77A00', display: 'grid', placeItems: 'center', flexShrink: 0 }}>🎟️</div>
+                    <div style={{ flex: 1 }}><strong style={{ display: 'block' }}>Solicitudes de canje</strong><div style={{ fontSize: 10, color: '#777', marginTop: 3 }}>{unreadRedemptions} sin gestionar</div></div>
+                    <button onClick={() => setTab('redemptions')} style={{ border: '1px solid #E35D5D', color: '#D83D3D', borderRadius: 20, padding: '3px 7px', fontSize: 10, background: 'none', cursor: 'pointer' }}>{unreadRedemptions}</button>
+                  </div>
+                )}
+                {pendingPartners > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: '1px solid #EEEAE4', fontSize: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#FFF1DA', color: '#C77A00', display: 'grid', placeItems: 'center', flexShrink: 0 }}>🤝</div>
+                    <div style={{ flex: 1 }}><strong style={{ display: 'block' }}>Partners pendientes de revisión</strong><div style={{ fontSize: 10, color: '#777', marginTop: 3 }}>{pendingPartners} sin activar</div></div>
+                    <button onClick={() => setTab('partners')} style={{ border: '1px solid #E35D5D', color: '#D83D3D', borderRadius: 20, padding: '3px 7px', fontSize: 10, background: 'none', cursor: 'pointer' }}>{pendingPartners}</button>
+                  </div>
+                )}
+                {unreadRedemptions === 0 && pendingPartners === 0 && (
+                  <p style={{ color: '#aaa', fontSize: 13 }}>Todo en orden ✓</p>
+                )}
+              </div>
+              <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ fontFamily: "Georgia,serif", fontSize: 17, margin: 0 }}>Acceso rápido</h3>
+                </div>
+                {[
+                  { label: '★ Añadir Brand Partner', tab: 'partners' as AdminTab },
+                  { label: '🎬 Añadir proyecto cinematográfico', tab: 'pipeline' as AdminTab },
+                  { label: '⚑ Publicar anuncio', tab: 'announcements' as AdminTab },
+                  { label: '♙ Members (Competición)', tab: 'sel_members' as AdminTab },
+                  { label: '▣ Contenido Oficial', tab: 'official' as AdminTab },
+                  { label: '⚙ Configuración', tab: 'config' as AdminTab },
+                ].map(a => (
+                  <div key={a.label} style={{ display: 'flex', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #eee', fontSize: 12 }}>
+                    <button onClick={() => setTab(a.tab)} style={{ background: 'none', border: 0, cursor: 'pointer', fontSize: 12, color: '#333', fontFamily: 'inherit', textAlign: 'left', padding: 0 }}>{a.label}</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== CRM ===== */}
+        {tab === 'crm' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>CRM · Base de datos</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión completa de todos los contactos del ecosistema Movies × Brands.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "Georgia,serif", fontSize: 17, marginBottom: 12 }}>Todos los contactos</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Nombre', 'Email', 'Rol', 'Estado', 'Fecha alta'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', fontSize: 9, textTransform: 'uppercase', color: '#4e4b47', padding: '11px 10px', borderBottom: '1px solid #E8E4DD', background: '#FCFCFB' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partners.map(p => (
+                      <tr key={p.id}>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 11.5 }}>{p.full_name}</td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 11.5, color: '#555' }}>{p.email}</td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 10 }}>Brand Partner</td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4' }}>
+                          <span style={{ display: 'inline-flex', padding: '4px 8px', borderRadius: 5, fontSize: 9, border: '1px solid', background: p.status === 'active' ? '#E9F6EC' : '#FFF3DC', color: p.status === 'active' ? '#237239' : '#AA6700', borderColor: p.status === 'active' ? '#B8DFC0' : '#F0D09B' }}>{p.status}</span>
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 10, color: '#aaa' }}>—</td>
+                      </tr>
+                    ))}
+                    {partners.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', opacity: .4, fontSize: 13 }}>No hay contactos todavía</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== ACTION CENTER ===== */}
+        {tab === 'action_center' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Centro de acción</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Tareas urgentes, alertas y acciones rápidas centralizadas.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>No hay acciones urgentes pendientes en este momento.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== WORKFLOWS ===== */}
+        {tab === 'workflows' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Automatizaciones</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestiona las automatizaciones y flujos de trabajo del ecosistema.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Próximamente: integración con n8n y Make para automatizaciones avanzadas.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== FINANCE ===== */}
+        {tab === 'finance' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Finanzas & Contratos</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Registro de ingresos, contratos y facturación del ecosistema.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+              {[
+                { icon: '💶', label: 'Ingresos totales', value: `${(partners.filter(p=>p.status==='active').length * 5000).toLocaleString('es-ES')} €` },
+                { icon: '📄', label: 'Contratos activos', value: partners.filter(p=>p.status==='active').length },
+                { icon: '⏳', label: 'Contratos pendientes', value: pendingPartners },
+                { icon: '🔄', label: 'Renovaciones próximas', value: '—' },
+              ].map(k => (
+                <div key={k.label} style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 16 }}>
+                  <div style={{ fontSize: 22, color: '#D98700' }}>{k.icon}</div>
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', marginTop: 6, color: '#303030' }}>{k.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#111', marginTop: 4 }}>{k.value}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de facturación y contratos disponible próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== TASKS ===== */}
+        {tab === 'tasks' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Tareas & Responsables</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión de tareas internas del equipo Movies × Brands.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de gestión de tareas próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== BULK ===== */}
+        {tab === 'bulk' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Acciones masivas</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Realiza acciones en lote sobre múltiples registros a la vez.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de acciones masivas próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== EVENTS ===== */}
+        {tab === 'events' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Cannes & Berlinale</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión de los eventos presenciales: invitaciones, asistentes y logística.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de gestión de eventos próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== TEMPLATES ===== */}
+        {tab === 'templates' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Plantillas</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Plantillas de correo, contratos y comunicaciones reutilizables.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de plantillas próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== MEDIA LIBRARY ===== */}
+        {tab === 'media_library' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Biblioteca de materiales</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Imágenes, vídeos y documentos del ecosistema Movies × Brands.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Biblioteca de materiales próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== REPORTS ===== */}
+        {tab === 'reports' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Informes automáticos</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Generación automática de informes periódicos del ecosistema.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de informes próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== CALENDAR ===== */}
+        {tab === 'calendar' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Calendario editorial</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Planificación de publicaciones y eventos del ecosistema.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Calendario editorial próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== SECURITY OPS ===== */}
+        {tab === 'security_ops' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Seguridad & Restauración</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Copias de seguridad, restauración y auditoría de seguridad avanzada.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de seguridad avanzada próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== BANNERS ===== */}
+        {tab === 'banners' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Banners e imágenes</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión de banners, imágenes de fondo y creatividades del portal.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de banners e imágenes próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== MEMBER HUB ===== */}
+        {tab === 'member_hub' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Member Hub</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión del espacio central de los Members del ecosistema.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Member Hub próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== SPACES ===== */}
+        {tab === 'spaces' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Espacios</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Visión general de todos los espacios del ecosistema.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <p style={{ fontSize: 13, color: '#777' }}>Módulo de espacios próximamente.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===== ADMINS ===== */}
+        {tab === 'admins' && (
+          <div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: 27, fontWeight: 700, color: '#121212', marginBottom: 6 }}>Admins & Roles</h2>
+            <p style={{ fontSize: 13, color: '#343434', marginBottom: 24 }}>Gestión de administradores y sus permisos dentro del panel.</p>
+            <div style={{ background: '#fff', border: '1px solid #E8E4DD', borderRadius: 8, padding: 20 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Usuario', 'Email', 'Rol', 'Acceso'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', fontSize: 9, textTransform: 'uppercase', color: '#4e4b47', padding: '11px 10px', borderBottom: '1px solid #E8E4DD', background: '#FCFCFB' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 11.5 }}>Sonia Boost</td>
+                    <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 11.5, color: '#555' }}>cannes@moviesxbrands.com</td>
+                    <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4', fontSize: 10 }}>Super Admin</td>
+                    <td style={{ padding: '10px', borderBottom: '1px solid #EEEAE4' }}>
+                      <span style={{ display: 'inline-flex', padding: '4px 8px', borderRadius: 5, fontSize: 9, border: '1px solid #B8DFC0', background: '#E9F6EC', color: '#237239' }}>Completo</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* ===== PARTNERS ===== */}
         {tab === 'partners' && (
@@ -859,18 +1391,54 @@ export default function AdminClient({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {announcements.map(a => (
                 <div key={a.id} style={{ ...panel, borderLeft: `3px solid ${a.pinned ? G : LINE}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {a.pinned && <span style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: G, border: `1px solid ${G}`, padding: '3px 8px', borderRadius: 20 }}>Fijado</span>}
-                      <span style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: CH, border: `1px solid ${LINE}`, padding: '3px 8px', borderRadius: 20 }}>{a.category}</span>
+                  {editAnnId === a.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div>
+                        <label style={labelStyle}>Título</label>
+                        <input value={editAnnTitle} onChange={e => setEditAnnTitle(e.target.value)} style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Contenido</label>
+                        <textarea value={editAnnBody} onChange={e => setEditAnnBody(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div>
+                          <label style={labelStyle}>Categoría</label>
+                          <select value={editAnnCategory} onChange={e => setEditAnnCategory(e.target.value)} style={inputStyle}>
+                            <option value="general">General</option>
+                            <option value="milestone">Hito</option>
+                            <option value="event">Evento</option>
+                            <option value="update">Actualización</option>
+                            <option value="opportunity">Oportunidad</option>
+                          </select>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: CH, marginTop: 18 }}>
+                          <input type="checkbox" checked={editAnnPinned} onChange={e => setEditAnnPinned(e.target.checked)} style={{ accentColor: G }} />
+                          Fijar arriba
+                        </label>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={saveEditAnn} disabled={editAnnSaving} style={{ padding: '9px 20px', background: G, color: '#0b0b0b', border: 'none', borderRadius: 5, cursor: 'pointer', fontFamily: 'Georgia,serif', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', fontWeight: 600 }}>{editAnnSaving ? 'Guardando…' : '✓ Guardar'}</button>
+                        <button onClick={() => setEditAnnId(null)} style={miniBtnStyle()}>Cancelar</button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 12, opacity: .4 }}>{new Date(a.published_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                      <button onClick={() => deleteAnnouncement(a.id)} style={miniBtnStyle(true)}>Eliminar</button>
-                    </div>
-                  </div>
-                  <h3 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 8 }}>{a.title}</h3>
-                  <p style={{ fontSize: 14, opacity: .7, lineHeight: 1.8, margin: 0 }}>{a.body}</p>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {a.pinned && <span style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: G, border: `1px solid ${G}`, padding: '3px 8px', borderRadius: 20 }}>Fijado</span>}
+                          <span style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: CH, border: `1px solid ${LINE}`, padding: '3px 8px', borderRadius: 20 }}>{a.category}</span>
+                          <span style={{ fontSize: 11, opacity: .4 }}>{new Date(a.published_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => startEditAnn(a)} style={miniBtnStyle()}>✏ Editar</button>
+                          <button onClick={() => { if (confirm('¿Eliminar este anuncio?')) deleteAnnouncement(a.id) }} style={miniBtnStyle(true)}>✕ Eliminar</button>
+                        </div>
+                      </div>
+                      <h3 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 8 }}>{a.title}</h3>
+                      <p style={{ fontSize: 14, opacity: .7, lineHeight: 1.8, margin: 0 }}>{a.body}</p>
+                    </>
+                  )}
                 </div>
               ))}
               {announcements.length === 0 && <div style={{ ...panel, textAlign: 'center', opacity: .4, padding: 48 }}>No hay anuncios todavía.</div>}
@@ -882,8 +1450,10 @@ export default function AdminClient({
         {tab === 'messages' && (
           <div>
             <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Mensajes</h2>
-            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Comunicaciones de los partners</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ opacity: .55, fontSize: 15, marginBottom: 30 }}>Comunicaciones de los partners, productores y distribuidoras</p>
+
+            <h4 style={{ fontWeight: 300, fontSize: 16, color: CH, letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: 14 }}>Brand Partners</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
               {messages.map(m => (
                 <div key={m.id} style={{ ...panel, borderLeft: `3px solid ${m.sender === 'partner' && !m.read_by_admin ? G : LINE}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -899,7 +1469,41 @@ export default function AdminClient({
                   <p style={{ fontSize: 14, opacity: .8, lineHeight: 1.7, margin: 0 }}>{m.body}</p>
                 </div>
               ))}
-              {messages.length === 0 && <div style={{ ...panel, textAlign: 'center', opacity: .4, padding: 48 }}>No hay mensajes todavía.</div>}
+              {messages.length === 0 && <div style={{ ...panel, textAlign: 'center', opacity: .4, padding: 32 }}>No hay mensajes de partners.</div>}
+            </div>
+
+            <h4 style={{ fontWeight: 300, fontSize: 16, color: CH, letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: 14 }}>Productores</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
+              {producerMessages.map(m => (
+                <div key={m.id} style={{ ...panel, borderLeft: `3px solid ${LINE}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 14 }}>{m.mxb_producers?.contact_name ?? 'Productor'}</span>
+                      {m.mxb_producers?.company_name && <span style={{ fontSize: 12, opacity: .5, marginLeft: 8 }}>{m.mxb_producers.company_name}</span>}
+                    </div>
+                    <span style={{ fontSize: 12, opacity: .4 }}>{new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p style={{ fontSize: 14, opacity: .8, lineHeight: 1.7, margin: 0 }}>{m.body}</p>
+                </div>
+              ))}
+              {producerMessages.length === 0 && <div style={{ ...panel, textAlign: 'center', opacity: .4, padding: 32 }}>No hay mensajes de productores.</div>}
+            </div>
+
+            <h4 style={{ fontWeight: 300, fontSize: 16, color: CH, letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: 14 }}>Distribuidoras</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {distributorMessages.map(m => (
+                <div key={m.id} style={{ ...panel, borderLeft: `3px solid ${LINE}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 14 }}>{m.mxb_distributors?.contact_name ?? 'Distribuidora'}</span>
+                      {m.mxb_distributors?.company_name && <span style={{ fontSize: 12, opacity: .5, marginLeft: 8 }}>{m.mxb_distributors.company_name}</span>}
+                    </div>
+                    <span style={{ fontSize: 12, opacity: .4 }}>{new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p style={{ fontSize: 14, opacity: .8, lineHeight: 1.7, margin: 0 }}>{m.body}</p>
+                </div>
+              ))}
+              {distributorMessages.length === 0 && <div style={{ ...panel, textAlign: 'center', opacity: .4, padding: 32 }}>No hay mensajes de distribuidoras.</div>}
             </div>
           </div>
         )}
@@ -1197,6 +1801,489 @@ export default function AdminClient({
             </form>
           </div>
         )}
+
+        {/* ===== PROSPECTOS ===== */}
+        {tab === 'prospectos' && (
+          <ProspectosTab
+            partner={null}
+            initProspects={initProspects}
+            meetingText={initConfig['prospects_meeting_text'] ?? ''}
+            isAdmin
+          />
+        )}
+
+        {/* ===== AWARDS ===== */}
+        {tab === 'awards' && (() => {
+          const totalAw = awardsMembers.length
+          const pendingAw = awardsMembers.filter(m => !m.approved).length
+          const approvedAw = awardsMembers.filter(m => m.approved).length
+          const videosAw = awardsMembers.filter(m => m.video_url).length
+
+          async function approveAwardsMember(id: string, approve: boolean) {
+            await supabase.from('mxb_awards_members').update({ approved: approve }).eq('id', id)
+            setAwardsMembers(prev => prev.map(m => m.id === id ? { ...m, approved: approve } : m))
+          }
+
+          async function deleteAwardsMember(id: string, name: string) {
+            if (!confirm(`¿Eliminar el perfil de ${name}?`)) return
+            await supabase.from('mxb_awards_members').delete().eq('id', id)
+            setAwardsMembers(prev => prev.filter(m => m.id !== id))
+          }
+
+          async function publishAwardsAnn() {
+            if (!awAnnTitle || !awAnnMsg) { setAwMsg('Indica título y mensaje.'); return }
+            const { data, error } = await supabase.from('mxb_awards_announcements').insert({ title: awAnnTitle, message: awAnnMsg }).select().single()
+            if (error) { setAwMsg('Error: ' + error.message); return }
+            setAwardsAnn(prev => [data, ...prev])
+            setAwAnnTitle(''); setAwAnnMsg('')
+            setAwMsg('✓ Comunicado publicado')
+            setTimeout(() => setAwMsg(''), 3000)
+          }
+
+          async function deleteAwardsAnn(id: string) {
+            if (!confirm('¿Eliminar este comunicado?')) return
+            await supabase.from('mxb_awards_announcements').delete().eq('id', id)
+            setAwardsAnn(prev => prev.filter(a => a.id !== id))
+          }
+
+          async function addResource() {
+            if (!awResSection) { setAwMsg('Indica el nombre de la sección.'); return }
+            const { data, error } = await supabase.from('mxb_awards_resources').insert({ section: awResSection, body: awResBody || null, youtube_link: awResYt || null, sort_order: awardsRes.length }).select().single()
+            if (error) { setAwMsg('Error: ' + error.message); return }
+            setAwardsRes(prev => [...prev, data])
+            setAwResSection(''); setAwResBody(''); setAwResYt('')
+            setAwMsg('✓ Recurso añadido'); setTimeout(() => setAwMsg(''), 3000)
+          }
+
+          async function deleteResource(id: string) {
+            if (!confirm('¿Eliminar este recurso?')) return
+            await supabase.from('mxb_awards_resources').delete().eq('id', id)
+            setAwardsRes(prev => prev.filter(r => r.id !== id))
+          }
+
+          async function addRequirement() {
+            if (!awReqBody) { setAwMsg('Indica el texto del bloque.'); return }
+            const { data, error } = await supabase.from('mxb_awards_requirements').insert({ title: awReqTitle || null, body: awReqBody, sort_order: awardsReq.length }).select().single()
+            if (error) { setAwMsg('Error: ' + error.message); return }
+            setAwardsReq(prev => [...prev, data])
+            setAwReqTitle(''); setAwReqBody('')
+            setAwMsg('✓ Bloque añadido'); setTimeout(() => setAwMsg(''), 3000)
+          }
+
+          async function deleteRequirement(id: string) {
+            if (!confirm('¿Eliminar este bloque?')) return
+            await supabase.from('mxb_awards_requirements').delete().eq('id', id)
+            setAwardsReq(prev => prev.filter(r => r.id !== id))
+          }
+
+          async function saveDates(edition: 'cannes' | 'berlinale') {
+            const prefix = `awards_${edition}`
+            const opens = edition === 'cannes' ? awCannesOpens : awBerlOpens
+            const closes = edition === 'cannes' ? awCannesCloses : awBerlCloses
+            const notes = edition === 'cannes' ? awCannesNotes : awBerlNotes
+            await Promise.all([
+              supabase.from('mxb_config').upsert({ key: `${prefix}_opens`, value: opens }, { onConflict: 'key' }),
+              supabase.from('mxb_config').upsert({ key: `${prefix}_closes`, value: closes }, { onConflict: 'key' }),
+              supabase.from('mxb_config').upsert({ key: `${prefix}_notes`, value: notes }, { onConflict: 'key' }),
+            ])
+            setAwMsg(`✓ Fechas de ${edition === 'cannes' ? 'Cannes' : 'Berlinale'} guardadas`)
+            setTimeout(() => setAwMsg(''), 3000)
+          }
+
+          async function sendPrivateMsg() {
+            if (!awPrivMsg) { setAwMsg('Escribe el mensaje.'); return }
+            const targets = awardsMembers.filter(m => {
+              if (awPrivAudience === 'all') return true
+              if (awPrivAudience === 'cannes') return !!(m.editions as { cannes?: boolean })?.cannes
+              return !!(m.editions as { berlinale?: boolean })?.berlinale
+            })
+            await Promise.all(targets.map(m => supabase.from('mxb_awards_messages').insert({ member_id: m.id, body: awPrivMsg, audience: awPrivAudience })))
+            setAwPrivMsg('')
+            setAwMsg(`✓ Mensaje enviado a ${targets.length} participante(s)`)
+            setTimeout(() => setAwMsg(''), 3000)
+          }
+
+          const S = inputStyle
+          return (
+            <div>
+              <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Awards</h2>
+              <p style={{ opacity: .55, fontSize: 15, marginBottom: 24 }}>Perfiles auto-registrados tras completar el pago de participación en la Competición.</p>
+
+              {awMsg && <div style={{ background: awMsg.startsWith('✓') ? 'rgba(90,140,90,.15)' : 'rgba(192,57,43,.15)', border: `1px solid ${awMsg.startsWith('✓') ? '#5a8c5a' : DANGER}`, borderRadius: 8, padding: '12px 18px', marginBottom: 20, fontSize: 14, color: awMsg.startsWith('✓') ? '#a8d8a8' : '#e07060' }}>{awMsg}</div>}
+
+              {/* Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 22, marginBottom: 26 }}>
+                {[['📝', 'Perfiles totales', totalAw], ['⏳', 'Pendientes', pendingAw], ['✓', 'Aprobados', approvedAw], ['🎤', 'Vídeos recibidos', videosAw]].map(([icon, label, val]) => (
+                  <div key={String(label)} style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 22 }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>{icon}</div>
+                    <div style={{ fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', opacity: .55, marginBottom: 6 }}>{label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 300, color: G }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Dates */}
+              <div style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 26, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 19, color: G, marginBottom: 4 }}>📅 Fechas de la Competición</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 16 }}>Cada participante ve las fechas de su edición elegida.</p>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ color: G, fontSize: 14, marginBottom: 10 }}>🇫🇷 Festival de Cannes 2027</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                    <div><label style={labelStyle}>Apertura</label><input type="date" value={awCannesOpens} onChange={e => setAwCannesOpens(e.target.value)} style={S} /></div>
+                    <div><label style={labelStyle}>Cierre de entregas</label><input type="date" value={awCannesCloses} onChange={e => setAwCannesCloses(e.target.value)} style={S} /></div>
+                  </div>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Nota (opcional)</label><input type="text" value={awCannesNotes} onChange={e => setAwCannesNotes(e.target.value)} style={S} /></div>
+                  <button onClick={() => saveDates('cannes')} style={miniBtnStyle()}>Guardar fechas de Cannes</button>
+                </div>
+                <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: 18 }}>
+                  <div style={{ color: G, fontSize: 14, marginBottom: 10 }}>🇩🇪 Berlinale Digital Show</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                    <div><label style={labelStyle}>Apertura</label><input type="date" value={awBerlOpens} onChange={e => setAwBerlOpens(e.target.value)} style={S} /></div>
+                    <div><label style={labelStyle}>Cierre de entregas</label><input type="date" value={awBerlCloses} onChange={e => setAwBerlCloses(e.target.value)} style={S} /></div>
+                  </div>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Nota (opcional)</label><input type="text" value={awBerlNotes} onChange={e => setAwBerlNotes(e.target.value)} style={S} /></div>
+                  <button onClick={() => saveDates('berlinale')} style={miniBtnStyle()}>Guardar fechas de Berlinale</button>
+                </div>
+              </div>
+
+              {/* Private Messaging */}
+              <div style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 26, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 19, color: G, marginBottom: 4 }}>✉️ Mensaje privado a participantes</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 14 }}>Se entrega directamente en el perfil de cada participante.</p>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', opacity: .5, marginBottom: 8 }}>Destinatarios</div>
+                  {(['all', 'cannes', 'berlinale'] as const).map(v => (
+                    <label key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, marginRight: 18, cursor: 'pointer' }}>
+                      <input type="radio" name="awAudience" checked={awPrivAudience === v} onChange={() => setAwPrivAudience(v)} style={{ width: 'auto' }} />
+                      {v === 'all' ? 'Todos los de Awards' : v === 'cannes' ? 'Solo Cannes 2027' : 'Solo Berlinale'}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={labelStyle}>Mensaje</label><textarea value={awPrivMsg} onChange={e => setAwPrivMsg(e.target.value)} rows={3} style={{ ...S, resize: 'vertical' }} /></div>
+                <button onClick={sendPrivateMsg} style={{ ...miniBtnStyle(), padding: '10px 24px' }}>Enviar mensaje</button>
+              </div>
+
+              {/* Awards Announcements */}
+              <div style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 26, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 19, color: G, marginBottom: 4 }}>📢 Comunicados de Awards</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 14 }}>Solo los ven quienes participan en la Competición.</p>
+                <div style={{ marginBottom: 12 }}><label style={labelStyle}>Título</label><input type="text" value={awAnnTitle} onChange={e => setAwAnnTitle(e.target.value)} style={S} /></div>
+                <div style={{ marginBottom: 12 }}><label style={labelStyle}>Mensaje</label><textarea value={awAnnMsg} onChange={e => setAwAnnMsg(e.target.value)} rows={3} style={{ ...S, resize: 'vertical' }} /></div>
+                <button onClick={publishAwardsAnn} style={{ background: G, color: '#0b0b0b', border: 'none', borderRadius: 6, padding: '12px 26px', cursor: 'pointer', fontFamily: 'Georgia,serif', fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>📢 Publicar comunicado</button>
+                {awardsAnn.length > 0 && <div style={{ marginTop: 16 }}>
+                  {awardsAnn.map(a => (
+                    <div key={a.id} style={{ background: '#0c0c0c', border: `1px solid ${LINE}`, borderRadius: 8, padding: '12px 14px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                      <div><div style={{ fontSize: 13, color: G }}>{a.title}</div><div style={{ fontSize: 12, opacity: .65, marginTop: 3, lineHeight: 1.5 }}>{a.message}</div><div style={{ fontSize: 10, opacity: .4, marginTop: 4 }}>{new Date(a.created_at).toLocaleDateString('es-ES')}</div></div>
+                      <button onClick={() => deleteAwardsAnn(a.id)} style={miniBtnStyle(true)}>✕</button>
+                    </div>
+                  ))}
+                </div>}
+              </div>
+
+              {/* Resources */}
+              <div style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 26, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 19, color: G, marginBottom: 4 }}>📚 Recursos y tutoriales</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 16 }}>Visibles para cada participante en su perfil.</p>
+                {awardsRes.map(r => (
+                  <div key={r.id} style={{ background: '#0c0c0c', border: `1px solid ${LINE}`, borderRadius: 8, padding: 16, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: G, marginBottom: 4 }}>{r.section}</div>
+                      {r.body && <div style={{ fontSize: 12, opacity: .7, lineHeight: 1.6 }}>{r.body}</div>}
+                      {r.youtube_link && <div style={{ fontSize: 11, color: CH, marginTop: 4 }}>▶ {r.youtube_link}</div>}
+                    </div>
+                    <button onClick={() => deleteResource(r.id)} style={miniBtnStyle(true)}>✕</button>
+                  </div>
+                ))}
+                <div style={{ background: '#0c0c0c', borderRadius: 8, padding: 16, marginTop: 8 }}>
+                  <p style={{ fontSize: 12, opacity: .6, marginBottom: 12 }}>Añadir nuevo recurso:</p>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Nombre de la sección</label><input type="text" value={awResSection} onChange={e => setAwResSection(e.target.value)} style={S} /></div>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Texto</label><textarea value={awResBody} onChange={e => setAwResBody(e.target.value)} rows={2} style={{ ...S, resize: 'vertical' }} /></div>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Enlace YouTube (opcional)</label><input type="text" value={awResYt} onChange={e => setAwResYt(e.target.value)} style={S} /></div>
+                  <button onClick={addResource} style={miniBtnStyle()}>➕ Añadir sección</button>
+                </div>
+              </div>
+
+              {/* Requirements */}
+              <div style={{ background: PANEL, border: `1px solid ${G}`, borderRadius: 10, padding: 26, marginBottom: 22 }}>
+                <h4 style={{ fontWeight: 300, fontSize: 19, color: G, marginBottom: 4 }}>📋 Requisitos y condiciones adicionales</h4>
+                <p style={{ fontSize: 13, opacity: .55, marginBottom: 16 }}>Bloques visibles para todos los participantes de Awards en su perfil.</p>
+                {awardsReq.map(r => (
+                  <div key={r.id} style={{ background: '#0c0c0c', border: `1px solid ${LINE}`, borderRadius: 8, padding: 16, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div><div style={{ fontSize: 12, color: G, marginBottom: 2 }}>{r.title}</div><div style={{ fontSize: 12, opacity: .7 }}>{r.body}</div></div>
+                    <button onClick={() => deleteRequirement(r.id)} style={miniBtnStyle(true)}>✕</button>
+                  </div>
+                ))}
+                <div style={{ background: '#0c0c0c', borderRadius: 8, padding: 16, marginTop: 8 }}>
+                  <p style={{ fontSize: 12, opacity: .6, marginBottom: 12 }}>Añadir bloque nuevo:</p>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Título (opcional)</label><input type="text" value={awReqTitle} onChange={e => setAwReqTitle(e.target.value)} style={S} /></div>
+                  <div style={{ marginBottom: 8 }}><label style={labelStyle}>Texto</label><textarea value={awReqBody} onChange={e => setAwReqBody(e.target.value)} rows={3} style={{ ...S, resize: 'vertical' }} /></div>
+                  <button onClick={addRequirement} style={miniBtnStyle()}>➕ Añadir bloque</button>
+                </div>
+              </div>
+
+              {/* Members list */}
+              <div style={{ background: PANEL, border: `1px solid ${LINE}`, borderRadius: 10, padding: 26 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <h4 style={{ fontWeight: 300, fontSize: 19, color: G, margin: 0 }}>Perfiles</h4>
+                </div>
+                {awardsMembers.length === 0 ? (
+                  <p style={{ fontSize: 13, opacity: .5 }}>No hay perfiles registrados todavía.</p>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          {['Nombre', 'Marca', 'Email', 'Ediciones', 'Sinopsis', 'Vídeo', 'Estado', 'Acciones'].map(h => (
+                            <th key={h} style={{ textAlign: 'left', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: CH, padding: '11px 12px', borderBottom: `1px solid ${G}`, fontWeight: 400 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {awardsMembers.map(m => (
+                          <tr key={m.id}>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 14 }}>{m.contact_name} {m.surname}</td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 13, opacity: .8 }}>{m.brand ?? '—'}</td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 12, opacity: .7 }}>{m.email}</td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 12 }}>
+                              {(m.editions as { cannes?: boolean })?.cannes && '🇫🇷 '}
+                              {(m.editions as { berlinale?: boolean })?.berlinale && '🇩🇪'}
+                            </td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 12 }}>{m.synopsis ? '✓' : '—'}</td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}`, fontSize: 12 }}>{m.video_url ? '✓' : '—'}</td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}` }}>
+                              <span style={{ fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', borderRadius: 20, padding: '4px 10px', background: m.approved ? 'rgba(212,175,55,.15)' : '#222', color: m.approved ? G : '#999', border: `1px solid ${m.approved ? G : '#444'}` }}>
+                                {m.approved ? 'Aprobado' : 'Pendiente'}
+                              </span>
+                            </td>
+                            <td style={{ padding: 12, borderBottom: `1px solid ${LINE}` }}>
+                              <button onClick={() => approveAwardsMember(m.id, !m.approved)} style={miniBtnStyle()}>
+                                {m.approved ? 'Suspender' : 'Aprobar'}
+                              </button>
+                              <button onClick={() => deleteAwardsMember(m.id, m.contact_name)} style={miniBtnStyle(true)}>✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ===== CONTENIDO ===== */}
+        {tab === 'content' && (() => {
+          const sectionBtn = (key: string, label: string) => (
+            <button key={key} onClick={() => setCtSection(key)} style={{ padding: '9px 18px', background: ctSection === key ? G : 'transparent', color: ctSection === key ? '#0b0b0b' : CH, border: `1px solid ${ctSection === key ? G : LINE}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'Georgia,serif', fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', marginRight: 8, marginBottom: 8 }}>{label}</button>
+          )
+          const ta = (value: string, onChange: (v: string) => void, rows = 2): React.ReactNode => (
+            <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} style={{ ...inputStyle, resize: 'vertical' }} />
+          )
+          const saveBtn = (key: string, value: unknown) => (
+            <button onClick={() => saveContent(key, value)} disabled={ctSaving} style={{ ...primaryBtn(ctSaving), marginTop: 12, padding: '9px 24px', fontSize: 10 }}>
+              {ctSaving ? 'Guardando…' : '💾 Guardar'}
+            </button>
+          )
+
+          return (
+            <div>
+              <h2 style={{ fontWeight: 300, fontSize: 32, color: G, marginBottom: 8 }}>Contenido del Portal</h2>
+              <p style={{ opacity: .55, fontSize: 15, marginBottom: 24 }}>Edita aquí el texto e imágenes que ven los partners. Los cambios se publican al instante.</p>
+
+              {ctMsg && <div style={{ background: ctMsg.startsWith('✓') ? 'rgba(111,207,151,.1)' : 'rgba(224,112,96,.1)', border: `1px solid ${ctMsg.startsWith('✓') ? '#6fcf97' : '#e07060'}`, borderRadius: 8, padding: '12px 18px', marginBottom: 20, fontSize: 14, color: ctMsg.startsWith('✓') ? '#6fcf97' : '#e07060' }}>{ctMsg}</div>}
+
+              <div style={{ marginBottom: 28, flexWrap: 'wrap', display: 'flex' }}>
+                {sectionBtn('hero', '🏠 Inicio')}
+                {sectionBtn('benefits', '⭐ Beneficios')}
+                {sectionBtn('awards', '🏆 Awards')}
+                {sectionBtn('ecosystem', '🌐 Ecosistema')}
+                {sectionBtn('cannes', '📸 Fotos Cannes')}
+              </div>
+
+              {/* HERO */}
+              {ctSection === 'hero' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div style={panel}>
+                    <label style={labelStyle}>Tagline del hero (cita de la marca)</label>
+                    {ta(ctHeroTagline, setCtHeroTagline, 2)}
+                    {saveBtn('hero_tagline', ctHeroTagline)}
+                  </div>
+                  <div style={panel}>
+                    <label style={labelStyle}>Subtítulo del hero (edición y fechas)</label>
+                    {ta(ctHeroSubtitle, setCtHeroSubtitle, 1)}
+                    {saveBtn('hero_subtitle', ctHeroSubtitle)}
+                  </div>
+                </div>
+              )}
+
+              {/* BENEFITS */}
+              {ctSection === 'benefits' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div style={panel}>
+                    <label style={labelStyle}>Cita de apertura del tab Beneficios</label>
+                    {ta(ctBenefitsQuote, setCtBenefitsQuote, 4)}
+                    {saveBtn('benefits_quote', ctBenefitsQuote)}
+                  </div>
+                  <div style={{ ...panel, borderColor: G }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                      <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Tarjetas de beneficios ({ctBenefitCards.length})</h4>
+                      <button onClick={() => setCtBenefitCards(prev => [...prev, { icon: '✨', title: 'Nuevo beneficio', desc: '' }])} style={miniBtnStyle()}>+ Añadir tarjeta</button>
+                    </div>
+                    {ctBenefitCards.map((card, i) => (
+                      <div key={i} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: 16, marginBottom: 14 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 2fr auto', gap: 10, alignItems: 'start' }}>
+                          <div>
+                            <label style={labelStyle}>Icono</label>
+                            <input value={card.icon ?? ''} onChange={e => setCtBenefitCards(prev => prev.map((c, j) => j === i ? { ...c, icon: e.target.value } : c))} style={{ ...inputStyle, fontSize: 22, textAlign: 'center', padding: '8px 6px' }} />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Título</label>
+                            <input value={card.title} onChange={e => setCtBenefitCards(prev => prev.map((c, j) => j === i ? { ...c, title: e.target.value } : c))} style={inputStyle} />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Descripción</label>
+                            <textarea value={card.desc} onChange={e => setCtBenefitCards(prev => prev.map((c, j) => j === i ? { ...c, desc: e.target.value } : c))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+                          </div>
+                          <button onClick={() => { if (confirm('¿Eliminar esta tarjeta?')) setCtBenefitCards(prev => prev.filter((_, j) => j !== i)) }} style={{ ...miniBtnStyle(true), marginTop: 22 }}>🗑</button>
+                        </div>
+                      </div>
+                    ))}
+                    {saveBtn('benefit_cards', ctBenefitCards)}
+                  </div>
+                </div>
+              )}
+
+              {/* AWARDS */}
+              {ctSection === 'awards' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div style={{ ...panel, borderColor: G }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                      <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Calendario / Timeline ({ctAwardsTimeline.length} hitos)</h4>
+                      <button onClick={() => setCtAwardsTimeline(prev => [...prev, { date: '', title: '', desc: '' }])} style={miniBtnStyle()}>+ Añadir hito</button>
+                    </div>
+                    {ctAwardsTimeline.map((item, i) => (
+                      <div key={i} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: 16, marginBottom: 14 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: 10 }}>
+                          <div><label style={labelStyle}>Fecha</label><input value={item.date ?? ''} onChange={e => setCtAwardsTimeline(prev => prev.map((c, j) => j === i ? { ...c, date: e.target.value } : c))} style={inputStyle} /></div>
+                          <div><label style={labelStyle}>Título</label><input value={item.title} onChange={e => setCtAwardsTimeline(prev => prev.map((c, j) => j === i ? { ...c, title: e.target.value } : c))} style={inputStyle} /></div>
+                          <div><label style={labelStyle}>Descripción</label><textarea value={item.desc} rows={2} onChange={e => setCtAwardsTimeline(prev => prev.map((c, j) => j === i ? { ...c, desc: e.target.value } : c))} style={{ ...inputStyle, resize: 'vertical' }} /></div>
+                          <button onClick={() => { if (confirm('¿Eliminar?')) setCtAwardsTimeline(prev => prev.filter((_, j) => j !== i)) }} style={{ ...miniBtnStyle(true), marginTop: 22 }}>🗑</button>
+                        </div>
+                      </div>
+                    ))}
+                    {saveBtn('awards_timeline', ctAwardsTimeline)}
+                  </div>
+
+                  <div style={panel}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                      <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Palmarés 2026</h4>
+                      <button onClick={() => setCtAwardsPalmares(prev => [...prev, { who: '', what: '', title: '', desc: '' }])} style={miniBtnStyle()}>+ Añadir</button>
+                    </div>
+                    {ctAwardsPalmares.map((item, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 10, marginBottom: 10 }}>
+                        <div><label style={labelStyle}>Nombre / Premio</label><input value={item.who ?? ''} onChange={e => setCtAwardsPalmares(prev => prev.map((c, j) => j === i ? { ...c, who: e.target.value } : c))} style={inputStyle} /></div>
+                        <div><label style={labelStyle}>Categoría</label><input value={item.what ?? ''} onChange={e => setCtAwardsPalmares(prev => prev.map((c, j) => j === i ? { ...c, what: e.target.value } : c))} style={inputStyle} /></div>
+                        <button onClick={() => setCtAwardsPalmares(prev => prev.filter((_, j) => j !== i))} style={{ ...miniBtnStyle(true), marginTop: 22 }}>🗑</button>
+                      </div>
+                    ))}
+                    {saveBtn('awards_palmares', ctAwardsPalmares)}
+                  </div>
+
+                  <div style={panel}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                      <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Reconocimientos Boost Legacy</h4>
+                      <button onClick={() => setCtAwardsLegacy(prev => [...prev, { who: '', what: '', title: '', desc: '' }])} style={miniBtnStyle()}>+ Añadir</button>
+                    </div>
+                    {ctAwardsLegacy.map((item, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 10, marginBottom: 10 }}>
+                        <div><label style={labelStyle}>Nombre</label><input value={item.who ?? ''} onChange={e => setCtAwardsLegacy(prev => prev.map((c, j) => j === i ? { ...c, who: e.target.value } : c))} style={inputStyle} /></div>
+                        <div><label style={labelStyle}>Descripción</label><input value={item.what ?? ''} onChange={e => setCtAwardsLegacy(prev => prev.map((c, j) => j === i ? { ...c, what: e.target.value } : c))} style={inputStyle} /></div>
+                        <button onClick={() => setCtAwardsLegacy(prev => prev.filter((_, j) => j !== i))} style={{ ...miniBtnStyle(true), marginTop: 22 }}>🗑</button>
+                      </div>
+                    ))}
+                    {saveBtn('awards_legacy', ctAwardsLegacy)}
+                  </div>
+                </div>
+              )}
+
+              {/* ECOSYSTEM */}
+              {ctSection === 'ecosystem' && (
+                <div style={{ ...panel, borderColor: G }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h4 style={{ fontWeight: 300, fontSize: 18, color: G }}>Tarjetas del Ecosistema ({ctEcosystemCards.length})</h4>
+                    <button onClick={() => setCtEcosystemCards(prev => [...prev, { img: '', date: '', title: '', desc: '', href: '' }])} style={miniBtnStyle()}>+ Añadir tarjeta</button>
+                  </div>
+                  {ctEcosystemCards.map((card, i) => (
+                    <div key={i} style={{ border: `1px solid ${LINE}`, borderRadius: 10, padding: 18, marginBottom: 18 }}>
+                      <div style={{ display: 'flex', gap: 18, marginBottom: 14 }}>
+                        <div style={{ width: 120, flexShrink: 0 }}>
+                          <div style={{ width: 120, height: 80, borderRadius: 8, overflow: 'hidden', background: '#101010', border: `1px solid ${LINE}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }} onClick={() => uploadImgToCard(ctEcosystemCards, i, setCtEcosystemCards)}>
+                            {card.img ? <img src={card.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 28, opacity: .3 }}>🖼</span>}
+                          </div>
+                          <button onClick={() => uploadImgToCard(ctEcosystemCards, i, setCtEcosystemCards)} style={{ ...miniBtnStyle(), width: '100%', textAlign: 'center', padding: '7px 4px' }}>📁 Subir foto</button>
+                        </div>
+                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div><label style={labelStyle}>Fecha / etiqueta</label><input value={card.date ?? ''} onChange={e => setCtEcosystemCards(prev => prev.map((c, j) => j === i ? { ...c, date: e.target.value } : c))} style={inputStyle} /></div>
+                          <div><label style={labelStyle}>Enlace (URL)</label><input value={card.href ?? ''} onChange={e => setCtEcosystemCards(prev => prev.map((c, j) => j === i ? { ...c, href: e.target.value } : c))} style={inputStyle} /></div>
+                          <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Título</label><input value={card.title} onChange={e => setCtEcosystemCards(prev => prev.map((c, j) => j === i ? { ...c, title: e.target.value } : c))} style={inputStyle} /></div>
+                          <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Descripción</label><textarea value={card.desc} rows={2} onChange={e => setCtEcosystemCards(prev => prev.map((c, j) => j === i ? { ...c, desc: e.target.value } : c))} style={{ ...inputStyle, resize: 'vertical' }} /></div>
+                        </div>
+                        <button onClick={() => { if (confirm('¿Eliminar esta tarjeta?')) setCtEcosystemCards(prev => prev.filter((_, j) => j !== i)) }} style={miniBtnStyle(true)}>🗑</button>
+                      </div>
+                    </div>
+                  ))}
+                  {saveBtn('ecosystem_cards', ctEcosystemCards)}
+                </div>
+              )}
+
+              {/* CANNES PHOTOS */}
+              {ctSection === 'cannes' && (
+                <div style={{ ...panel, borderColor: G }}>
+                  <h4 style={{ fontWeight: 300, fontSize: 18, color: G, marginBottom: 8 }}>Fotos de Cannes 2026</h4>
+                  <p style={{ fontSize: 13, opacity: .55, marginBottom: 20 }}>Las 4 fotos que aparecen en la cuadrícula del Dashboard. Haz clic en cada foto para subir una nueva.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+                    {(ctCannesPhotos.length === 0 ? ['', '', '', ''] : ctCannesPhotos).map((src, i) => (
+                      <div key={i} style={{ cursor: 'pointer' }} onClick={() => uploadPhotoSlot(i)}>
+                        <div style={{ aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', border: `2px dashed ${G}`, background: '#101010', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                          {src ? <img src={src} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 32, opacity: .25 }}>📷</span>}
+                        </div>
+                        <button style={{ ...miniBtnStyle(), width: '100%', textAlign: 'center' }}>📁 Foto {i + 1}</button>
+                      </div>
+                    ))}
+                  </div>
+                  {saveBtn('cannes_photos', ctCannesPhotos)}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ===== POWER LIST ===== */}
+        {tab === 'powerlist' && (
+          <PowerListTab entries={powerListEntries} requests={powerListRequests} />
+        )}
+
+        {/* ===== EXTRA TABS ===== */}
+        {tab === 'institutions' && <InstitutionsTab />}
+        {tab === 'community' && <CommunityTab />}
+        {tab === 'communications' && <CommunicationsTab />}
+        {tab === 'question' && <LaPreguntaTab />}
+        {tab === 'official' && <OfficialContentTab />}
+        {tab === 'opportunities' && <OpportunitiesTab />}
+        {tab === 'premium' && <PremiumExperiencesTab />}
+        {tab === 'academy' && <AcademyTab />}
+        {tab === 'fov' && <FOVAdminTab />}
+        {tab === 'lacroisette' && <div style={{padding:32,color:'#fff'}}>La Croisette — próximamente</div>}
+        {tab === 'docs' && <PDFDocsTab />}
+        {tab === 'sel_members' && <SelMembersTab />}
+        {tab === 'brand_leads' && <BrandLeadsTab />}
+        {tab === 'notifications' && <NotificationsTab onMarkAllRead={() => setNotifCount(0)} />}
+        {tab === 'visibility' && <VisibilityTab />}
+        {tab === 'security_log' && <SecurityLogTab />}
+        {tab === 'admin_roles' && <AdminRolesTab />}
+        {tab === 'credits' && <CreditsTab />}
+        {tab === 'portal_settings' && <PortalSettingsTab />}
 
       </div>
     </div>

@@ -15,6 +15,8 @@ export type Partner = {
   contract_end: string | null
   agreement_accepted: boolean
   notes: string | null
+  specialty: string | null
+  editions: { cannes?: boolean; berlinale?: boolean } | null
   created_at: string
 }
 
@@ -95,6 +97,7 @@ export type PipelineFilm = {
   funding_remaining: number | null
   funding_pct: number | null
   festival: string | null
+  dossier_url: string | null
   status: string
   published_at: string | null
 }

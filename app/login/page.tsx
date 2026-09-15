@@ -1,7 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const G = '#D4AF37'
@@ -14,20 +13,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError('Email o contraseña incorrectos.')
       setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      const role = data.user?.app_metadata?.mxb_role
+      if (role === 'admin') window.location.href = '/admin'
+      else if (role === 'producer') window.location.href = '/producers'
+      else if (role === 'distributor') window.location.href = '/distributors'
+      else if (role === 'awards') window.location.href = '/awards'
+      else window.location.href = '/dashboard'
     }
   }
 
