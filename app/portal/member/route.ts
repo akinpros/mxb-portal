@@ -9,6 +9,8 @@ export const dynamic = 'force-dynamic'
 let _cache: { html: string; ts: number } | null = null
 const CACHE_TTL = 5 * 60 * 1000
 
+const SW_INJECT = `<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>`
+
 const MOBILE_INJECT = `<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 *{box-sizing:border-box!important}
@@ -281,7 +283,7 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
 })();
 </script>`
 
-  html = html.replace('</body>', inject + thriveCartWire + cmsRuntime + '</body>')
+  html = html.replace('</body>', inject + thriveCartWire + cmsRuntime + SW_INJECT + '</body>')
 
   // Store in cache
   _cache = { html, ts: Date.now() }

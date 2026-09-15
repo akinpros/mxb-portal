@@ -4,6 +4,8 @@ import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
+const SW_INJECT = `<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>`
+
 const MOBILE_INJECT = `<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 /* Mobile responsiveness overrides */
@@ -45,7 +47,7 @@ const PROFILE_URL_INJECT = `<script>
 export async function GET() {
   let html = fs.readFileSync(path.join(process.cwd(), 'html', 'portal-home.html'), 'utf-8')
   html = html.replace('<head>', '<head>' + MOBILE_INJECT)
-  html = html.replace('</body>', PROFILE_URL_INJECT + '</body>')
+  html = html.replace('</body>', PROFILE_URL_INJECT + SW_INJECT + '</body>')
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
