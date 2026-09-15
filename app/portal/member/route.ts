@@ -5,6 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
+// Cache rendered HTML for 5 minutes to avoid re-reading 92MB file on every request
+let _cache: { html: string; ts: number } | null = null
+const CACHE_TTL = 5 * 60 * 1000
+
 const CONFIG_KEYS = [
   'announcement_banner',
   'welcome_message',
@@ -23,6 +27,7 @@ const CONFIG_KEYS = [
   'event_cta_url',
   'thrivecart_gala_url',
   'thrivecart_redcarpet_url',
+  'thrivecart_single_url',
   'featured_video_url',
   'featured_video_title',
   'gallery_images',
@@ -31,6 +36,13 @@ const CONFIG_KEYS = [
 ]
 
 export async function GET() {
+  // Return cached version if still fresh
+  if (_cache && Date.now() - _cache.ts < CACHE_TTL) {
+    return new NextResponse(_cache.html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    })
+  }
+
   let html = fs.readFileSync(path.join(process.cwd(), 'html', 'portal-member.html'), 'utf-8')
 
   // Fetch live config from Supabase
@@ -97,6 +109,9 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
     }
     if(c.thrivecart_redcarpet_url){
       document.querySelectorAll('[data-tc-product="redcarpet"]').forEach(function(el){el.href=c.thrivecart_redcarpet_url;});
+    }
+    if(c.thrivecart_single_url){
+      document.querySelectorAll('[data-tc-product="single"],[data-tc-product="gala1"]').forEach(function(el){el.href=c.thrivecart_single_url;});
     }
 
     // Event details
@@ -220,7 +235,41 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
 })();
 </script>`
 
-  html = html.replace('</body>', inject + '</body>')
+  const cmsRuntime = '<script src="/cms/cms-runtime.js"></script>'
+
+  // Wire all three ThriveCart checkout buttons to live URLs
+  const thriveCartWire = `<script>
+(function(){
+  var URLS = {
+    membership: 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/',
+    gala1:      'https://sales.sprintogrowth.com/1-ticket-global-boost-awards-official-gala/',
+    gala2:      'https://sales.sprintogrowth.com/global-boost-awards-official-gala-2-tickets/'
+  };
+
+  // Track which ticket qty the user selected (1 or 2)
+  var _qty = 1;
+  var _origSetQty = window.setPremiumTicketQty;
+  window.setPremiumTicketQty = function(n){
+    _qty = (n === 2) ? 2 : 1;
+    if(typeof _origSetQty === 'function') _origSetQty(n);
+  };
+
+  // Gala purchase → correct URL based on selected qty
+  window.purchaseGalaTickets = function(){
+    window.location.href = (_qty === 2) ? URLS.gala2 : URLS.gala1;
+  };
+
+  // Membership payment → ThriveCart 497€ page
+  window.doRegister = function(){
+    window.location.href = URLS.membership;
+  };
+})();
+</script>`
+
+  html = html.replace('</body>', inject + thriveCartWire + cmsRuntime + '</body>')
+
+  // Store in cache
+  _cache = { html, ts: Date.now() }
 
   return new NextResponse(html, {
     headers: {
