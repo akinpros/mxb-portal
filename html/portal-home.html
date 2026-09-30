@@ -47,6 +47,11 @@
   .msg.err{color:#e07060;display:block;}
   .hp-field{position:absolute;left:-9999px;top:-9999px;opacity:0;height:0;width:0;overflow:hidden;}
   .card-footer{margin-top:22px;padding-top:16px;border-top:1px solid #2a2a2a;text-align:center;font-size:10.5px;opacity:.45;line-height:1.8;}
+  .btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;margin-top:8px;background:#fff;color:#3c3c3c;border:1px solid rgba(0,0,0,.18);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;letter-spacing:.01em;transition:box-shadow .18s,background .15s;}
+  .btn-google:hover{background:#f7f7f7;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .btn-google svg{flex:none;}
+  .auth-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:rgba(255,255,255,.28);font-size:10px;letter-spacing:.12em;text-transform:uppercase;}
+  .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.12);}
 
   nav{position:sticky;top:0;z-index:50;background:rgba(11,11,11,.97);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(8px);flex-wrap:wrap;gap:8px;}
   .nav-logo{font-size:14px;letter-spacing:.24em;color:var(--gold);font-weight:300;white-space:nowrap;}
@@ -1164,19 +1169,7 @@
   #moreView .bp-activity-text{color:rgba(23,21,18,.62);}
   #moreView .bp-activity-date{text-align:right;color:rgba(23,21,18,.45);white-space:nowrap;}
 
-  #moreView #profileEditForm{background:#fff;border:1px solid rgba(11,11,11,.10);border-radius:12px;padding:22px;margin:18px 0;box-shadow:0 4px 18px rgba(23,21,18,.05);}
-  #moreView #profileEditForm .profile-header{margin-bottom:28px;}
-  #moreView #profileEditForm .cover-photo{border-color:rgba(11,11,11,.12);background:#F1EEE7;}
-  #moreView #profileEditForm .cover-placeholder{color:#6f6b65;}
-  #moreView #profileEditForm .avatar-box-lg{border-color:#fff;background:#0B0B0B;}
-  #moreView #profileEditForm .upload-btn{background:#fff;border-color:rgba(11,11,11,.18);color:#171512;font-family:'Inter',sans-serif;text-transform:none;letter-spacing:.01em;}
-  #moreView #profileEditForm .panel{background:#fff;border-color:rgba(11,11,11,.10);color:#171512;margin:0;padding:0;box-shadow:none;}
-  #moreView #profileEditForm .panel h4{font-family:'Fraunces',Georgia,serif;color:#171512;font-size:18px;font-weight:500;}
-  #moreView #profileEditForm .panel .hint{color:rgba(23,21,18,.58);opacity:1;}
-  #moreView #profileEditForm .field label{font-family:'Inter',sans-serif;color:#171512;letter-spacing:.02em;text-transform:none;font-size:11px;font-weight:600;}
-  #moreView #profileEditForm .field input,#moreView #profileEditForm .field textarea{background:#FBFAF7;border:1px solid rgba(11,11,11,.12);color:#171512;font-family:'Inter',sans-serif;}
-  #moreView #profileEditForm .field input:focus,#moreView #profileEditForm .field textarea:focus{outline:none;border-color:#C9A227;background:#fff;}
-  #moreView #profileEditForm .mini-btn{background:#0B0B0B;border-color:#0B0B0B;color:#fff;text-transform:none;letter-spacing:.02em;font-family:'Inter',sans-serif;}
+  /* v2 profile editor overrides neutralised — dark theme applied via #pef-v2-css */
 
   #moreView .bp-existing-section{margin-top:14px;background:#fff;border:1px solid rgba(11,11,11,.10);border-radius:11px;padding:20px 22px;color:#171512;}
   #moreView .bp-existing-section .section-title{font-family:'Fraunces',Georgia,serif;color:#171512 !important;font-size:18px !important;margin:0 0 5px !important;}
@@ -4216,7 +4209,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   <div class="card" id="loginCard">
     <h3>Acceso privado</h3>
-    <p class="subtitle">Entra en tu perfil para gestionar tu participación en la Competición.</p>
+    <p class="subtitle">Accede al portal con tus credenciales de member.</p>
     <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="tu@email.com"></div>
     <div class="field"><label>Contraseña</label>
       <div style="position:relative;">
@@ -4226,6 +4219,8 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
     <div class="hp-field"><label>No rellenar</label><input type="text" id="hpFieldLogin" tabindex="-1" autocomplete="off"></div>
     <button class="btn-gold" onclick="doLogin()">Entrar</button>
+    <div class="auth-divider">o</div>
+    <button class="btn-google" type="button" onclick="mxbGoogleAuth('login')"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.3 30.2 0 24 0 14.7 0 6.8 5.4 3 13.3l7.9 6.1C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.3-4 6.1-10 6.1-17z"/><path fill="#FBBC05" d="M10.9 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l8.4-6.2z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6 0-11.2-4-13-9.3l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>Continuar con Google</button>
     <button class="switch-link" onclick="showForgotPassword()">¿Olvidaste tu contraseña?</button>
     <button class="switch-link" onclick="showRegister()">¿Primera vez? Regístrate aquí</button>
     <div class="msg" id="loginMsg"></div>
@@ -4253,6 +4248,8 @@ document.addEventListener('DOMContentLoaded',function(){
   <div class="card" id="registerCard" style="display:none;">
     <h3>Crear mi cuenta</h3>
     <p class="subtitle">Join The Portal — 497 €/año. El siguiente paso es el pago; después, completas tu perfil.</p>
+    <button class="btn-google" type="button" onclick="mxbGoogleAuth('register')"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.3 30.2 0 24 0 14.7 0 6.8 5.4 3 13.3l7.9 6.1C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.3-4 6.1-10 6.1-17z"/><path fill="#FBBC05" d="M10.9 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l8.4-6.2z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6 0-11.2-4-13-9.3l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>Registrarse con Google</button>
+    <div class="auth-divider">o continúa con email</div>
     <div class="field"><label>Nombre</label><input type="text" id="regName" placeholder="Nombre"></div>
     <div class="field"><label>Apellidos</label><input type="text" id="regSurname" placeholder="Apellidos"></div>
     <div class="field"><label>Teléfono móvil</label><input type="tel" id="regPhone" placeholder="+34 600 000 000"></div>
@@ -4285,7 +4282,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="msg" id="registerMsg"></div>
   </div>
 
-  <div class="card-footer">Acceso exclusivo, por invitación tras el pago de participación.<br>Este enlace no está enlazado desde ningún sitio público.</div>
+  <div class="card-footer">Acceso exclusivo para miembros de Movies × Brands.</div>
 </div>
 
 <!-- ==================== MEMBERSHIP CHECKOUT · THRIVECART READY ==================== -->
@@ -4338,6 +4335,7 @@ document.addEventListener('DOMContentLoaded',function(){
           </ul>
         </details>
         <div class="mxb-checkout-trust"><span>Acceso anual</span><span>Pago seguro</span><span>Activación inmediata</span></div>
+        <p style="font-size:9.5px;opacity:.45;line-height:1.65;margin-top:14px;text-align:center;">Membership provides access to the Movies × Brands ecosystem. Premium experiences and visibility opportunities are offered exclusively to members, subject to availability, selection, and, where applicable, additional cost.</p>
       </section>
       <section class="mxb-checkout-panel mxb-payment-panel">
         <div class="step">Paso final</div>
@@ -4476,15 +4474,24 @@ document.addEventListener('DOMContentLoaded',function(){
     <a href="#" class="logo" onclick="event.preventDefault(); showPublicHome();"><span class="mxb">MOVIES</span><span class="sep">×</span><span class="mxb">BRANDS</span></a>
     <a href="#" class="back" onclick="event.preventDefault(); showPublicHome();">← Volver</a>
   </div>
-  <div class="gw-eyebrow">The Portal</div>
-  <div class="gw-title">Join The Portal</div>
-  <div class="card" style="max-width:560px;">
-    <div style="text-align:center;">
-      <div style="font-size:38px;margin-bottom:10px;">✓</div>
-      <h3>¡Pago confirmado!</h3>
-      <p class="subtitle" style="margin-bottom:22px;">Ya casi está — completa lo esencial de tu perfil para que podamos revisarlo. En cuanto lo aprobemos, tendrás acceso a todo tu espacio.</p>
-    </div>
 
+  <!-- Welcome hero -->
+  <div style="text-align:center;padding:48px 24px 0;max-width:620px;margin:0 auto;">
+    <div style="width:56px;height:56px;border-radius:50%;border:2px solid var(--gold,#C9A227);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:22px;color:var(--gold,#C9A227);">✦</div>
+    <h1 style="font-family:'Fraunces',Georgia,serif;font-weight:400;font-size:clamp(28px,5vw,46px);line-height:1.12;color:#F7F3EC;margin:0 0 16px;letter-spacing:-.01em;">
+      Bienvenido a <span style="color:var(--gold,#C9A227);">Movies&nbsp;×&nbsp;Brands</span>
+    </h1>
+    <p style="font-family:'Inter',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold,#C9A227);margin:0 0 20px;">
+      El ecosistema que une cine, marcas, inteligencia artificial e impacto humano
+    </p>
+    <p style="font-family:'Inter',Arial,sans-serif;font-size:15px;line-height:1.7;color:#b5b0a7;margin:0 0 40px;max-width:480px;margin-left:auto;margin-right:auto;">
+      Estamos revisando tu perfil. En un plazo máximo de 48 horas recibirás por correo tu acceso completo.
+    </p>
+    <div style="width:48px;height:1px;background:var(--gold,#C9A227);opacity:.4;margin:0 auto 40px;"></div>
+    <p style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold,#C9A227);margin:0 0 24px;">Completa tu perfil</p>
+  </div>
+
+  <div class="card" style="max-width:560px;">
     <div style="text-align:center;margin-bottom:18px;">
       <div class="avatar-box" id="pendingAvatarBox" style="margin:0 auto 10px;width:88px;height:88px;border-radius:50%;"><span>🏛</span></div>
       <label class="upload-btn" style="font-size:9.5px;">⬆ Subir foto
@@ -4573,6 +4580,7 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
   </header>
 
+  <button id="mxbPanelToggle" onclick="document.body.classList.toggle('mxb-panel-peek')" title="Mostrar/ocultar panel">☰ <span style="font-size:10px;letter-spacing:.05em;">PANEL</span></button>
   <div class="app-shell">
     <aside class="app-sidebar">
       <div class="sidebar-section">
@@ -5951,45 +5959,90 @@ document.addEventListener('DOMContentLoaded',function(){
 
           <!-- FUNCIONALIDAD ORIGINAL DE EDICIÓN — CONSERVADA -->
           <div id="profileEditForm" style="display:none;">
-            <div class="profile-header">
-              <div class="avatar-overlap-row">
-                <div class="avatar-box-lg" id="avatarBox"><span>🏛</span></div>
-                <div class="profile-name-block">
-                  <label class="upload-btn" style="padding:7px 14px;font-size:9.5px;">⬆ Subir foto de perfil
-                    <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
-                  </label>
+            <style id="pef-v2-css">
+#profileEditForm{background:#08090b;color:#f5f1e8;border-radius:18px;padding:28px 24px 36px;margin-bottom:24px;}
+.pef-wrap{max-width:820px;margin:0 auto;}
+.pef-eyebrow{color:#C9A227;letter-spacing:.18em;font-size:10.5px;font-weight:700;text-transform:uppercase;margin-bottom:10px;}
+.pef-h1{font-family:'Fraunces',Georgia,serif;font-weight:400;font-size:clamp(28px,3.5vw,44px);line-height:1.1;margin:0 0 8px;color:#f5f1e8;}
+.pef-lead{color:#b5b0a7;margin:0 0 22px;font-size:14px;}
+.pef-review{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border:1px solid #7a6328;border-radius:12px;background:#1a1508;margin-bottom:28px;font-size:13px;}
+.pef-review strong{color:#C9A227;white-space:nowrap;}
+.pef-review span{color:#e4d9bc;}
+.pef-card{background:#111315;border:1px solid #2e2d2b;border-radius:18px;padding:26px;margin-bottom:18px;}
+.pef-card-h2{font-family:'Fraunces',Georgia,serif;font-weight:400;font-size:22px;color:#f5f1e8;margin:0 0 5px;}
+.pef-card-intro{color:#b5b0a7;font-size:13px;margin:0 0 20px;}
+.pef-photo-row{display:flex;align-items:center;gap:18px;margin-bottom:20px;}
+#profileEditForm .avatar-box-lg{width:80px;height:80px;border-radius:50%;border:2px solid #C9A227;background:#2a2310;display:grid;place-items:center;font-size:28px;flex:none;}
+.pef-upload-btn{display:inline-block;padding:9px 16px;border:1px solid #C9A227;border-radius:9px;color:#C9A227;font:700 10.5px 'Inter',sans-serif;letter-spacing:.05em;cursor:pointer;background:transparent;}
+.pef-upload-btn:hover{background:#C9A22714;}
+.pef-portrait-section{margin-top:18px;padding-top:18px;border-top:1px solid #2e2d2b;}
+.pef-portrait-label{font:700 11px 'Inter',sans-serif;color:#C9A227;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+#profileEditForm .bp-portrait-preview{width:100%;max-width:180px;aspect-ratio:4/5;background:#1a1a1a;border:1px dashed #444;border-radius:10px;display:grid;place-items:center;color:#666;font-size:12px;margin-bottom:10px;}
+.pef-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.pef-field{display:block;margin-bottom:18px;}
+.pef-field>span,.pef-field>label{display:block;color:#C9A227;font:700 11px 'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px;}
+#profileEditForm input[type=text],#profileEditForm input[type=url],#profileEditForm input[type=email],#profileEditForm textarea,#profileEditForm select{display:block;width:100%;padding:12px 14px;border:1px solid #3a3836;border-radius:10px;background:#1c1e21;color:#f5f1e8;font:14px 'Inter',sans-serif;outline:none;transition:border-color .15s;}
+#profileEditForm input:focus,#profileEditForm textarea:focus,#profileEditForm select:focus{border-color:#C9A227;box-shadow:0 0 0 3px rgba(201,162,39,.18);}
+#profileEditForm textarea{min-height:88px;resize:vertical;}
+.pef-help{display:block;color:#7a7570;font-size:11.5px;margin-top:6px;}
+.pef-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding-top:20px;border-top:1px solid #2e2d2b;margin-top:6px;}
+.pef-cancel{background:transparent;border:1px solid #444;color:#b5b0a7;border-radius:9px;padding:11px 20px;font:700 11px 'Inter',sans-serif;letter-spacing:.04em;cursor:pointer;}
+.pef-cancel:hover{border-color:#C9A227;color:#C9A227;}
+.pef-save{background:#C9A227;border:1px solid #C9A227;color:#0a0800;border-radius:9px;padding:11px 24px;font:700 11.5px 'Inter',sans-serif;letter-spacing:.04em;cursor:pointer;}
+.pef-save:hover{background:#d4ad30;}
+@media(max-width:640px){.pef-grid{grid-template-columns:1fr;}.pef-actions{flex-direction:column;}.pef-save,.pef-cancel{width:100%;text-align:center;}.pef-card{padding:18px;}}
+            </style>
+            <div class="pef-wrap">
+              <div class="pef-eyebrow">MIEMBRO · MOVIES × BRANDS</div>
+              <h2 class="pef-h1">Tu perfil, tu presencia.</h2>
+              <p class="pef-lead">Presenta tu experiencia y tu marca al ecosistema Movies × Brands.</p>
+              <div class="pef-review" role="status">
+                <strong>● En revisión</strong>
+                <span>Los cambios que guardes se publicarán tras la aprobación del equipo. Tu perfil público conservará la última versión aprobada.</span>
+              </div>
+
+              <section class="pef-card">
+                <h2 class="pef-card-h2">Imagen de perfil</h2>
+                <p class="pef-card-intro">Una imagen profesional hace que tu perfil sea reconocible.</p>
+                <div class="pef-photo-row">
+                  <div class="avatar-box-lg" id="avatarBox"><span>🏛</span></div>
+                  <div>
+                    <label class="pef-upload-btn">⬆ Subir foto de perfil<input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)"></label>
+                    <small class="pef-help" style="margin-top:8px;">JPG o PNG · cuadrada o vertical</small>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div class="panel gold-border">
-              <h4>Datos de tu perfil</h4>
-              <p class="hint">Esta información podrá usarse en tu certificado y en materiales del ecosistema. Cualquier cambio que guardes aquí vuelve a pasar por revisión antes de publicarse.</p>
-
-              <div class="field">
-                <label>Nombre de usuario</label>
-                <input type="text" id="pUsername" placeholder="Ej: marcalopez" maxlength="30" autocomplete="off">
-                <div class="bp-username-note" id="pUsernameNote">Elige tu nombre de usuario. Podrás guardarlo una sola vez y después no se podrá cambiar.</div>
-              </div>
-
-              <div class="bp-media-upload-grid" style="grid-template-columns:1fr;">
-                <div class="bp-media-upload-card">
-                  <h5>Fotografía vertical 1080 × 1350</h5>
-                  <p>Formato editorial 4:5. El sistema comprobará que la imagen sea exactamente 1080 × 1350 px.</p>
+                <div class="pef-portrait-section">
+                  <div class="pef-portrait-label">Fotografía vertical 1080 × 1350</div>
                   <div class="bp-portrait-preview" id="portraitPhotoPreview">1080 × 1350</div>
-                  <label class="upload-btn" style="display:inline-block;padding:8px 12px;font-size:9.5px;">⬆ Subir fotografía
-                    <input type="file" accept="image/*" style="display:none;" onchange="handlePortraitPhotoUpload(event)">
-                  </label>
+                  <label class="pef-upload-btn">⬆ Subir fotografía vertical<input type="file" accept="image/*" style="display:none;" onchange="handlePortraitPhotoUpload(event)"></label>
+                  <small class="pef-help" style="margin-top:8px;">Formato editorial 4:5 · 1080 × 1350 px</small>
                 </div>
-              </div>
+              </section>
 
-              <div class="field"><label>Título / Cargo</label><input type="text" id="pTitle" placeholder="Ej: CEO, Fundadora…"></div>
-              <div class="field"><label>Nombre de la empresa</label><input type="text" id="pCompany" placeholder="Nombre de tu empresa…"></div>
-              <div class="field"><label>Servicio que ofrecen</label><input type="text" id="pService" placeholder="Ej: suplementos de bienestar, coaching de longevidad…"></div>
-              <div class="field"><label>Biografía corta (1-2 frases)</label><textarea id="pBioShort" rows="2" placeholder="Una presentación breve de tu marca…"></textarea></div>
-              <div class="field"><label>Biografía larga</label><textarea id="pBioLong" rows="5" placeholder="Cuenta la historia de tu marca con más detalle…"></textarea></div>
-              <button class="mini-btn" onclick="saveProfile()">Guardar perfil</button>
-              <button class="mini-btn" style="background:transparent;border:1px solid #555;color:#171512;" onclick="closeProfileEditForm()">Cancelar</button>
+              <section class="pef-card">
+                <h2 class="pef-card-h2">Identidad profesional</h2>
+                <p class="pef-card-intro">Estos datos aparecen en tu perfil público del ecosistema.</p>
+                <div class="pef-grid">
+                  <label class="pef-field"><span>NOMBRE DE USUARIO</span><input type="text" id="pUsername" placeholder="Ej: marcalopez" maxlength="30" autocomplete="off"><small class="pef-help" id="pUsernameNote">Elige tu identificador único. No se puede cambiar una vez guardado.</small></label>
+                  <label class="pef-field"><span>TÍTULO / CARGO</span><input type="text" id="pTitle" placeholder="Ej: CEO, Fundadora…"></label>
+                </div>
+                <div class="pef-grid">
+                  <label class="pef-field"><span>EMPRESA O MARCA</span><input type="text" id="pCompany" placeholder="Nombre de tu empresa…"></label>
+                  <label class="pef-field"><span>SERVICIOS Y ESPECIALIDAD</span><input type="text" id="pService" placeholder="Ej: coaching de longevidad…"></label>
+                </div>
+              </section>
+
+              <section class="pef-card">
+                <h2 class="pef-card-h2">Tu historia</h2>
+                <p class="pef-card-intro">Describe tu trabajo con claridad, criterio y ambición.</p>
+                <label class="pef-field"><span>BIOGRAFÍA BREVE</span><textarea id="pBioShort" rows="2" placeholder="Una presentación breve de tu marca…"></textarea></label>
+                <label class="pef-field"><span>BIOGRAFÍA COMPLETA</span><textarea id="pBioLong" rows="5" placeholder="Cuenta la historia de tu marca con más detalle…"></textarea></label>
+              </section>
+
+              <div class="pef-actions">
+                <button class="pef-cancel" type="button" onclick="closeProfileEditForm()">Cancelar</button>
+                <button class="pef-save" type="button" onclick="saveProfile()">Guardar cambios →</button>
+              </div>
             </div>
           </div>
 
@@ -6959,31 +7012,13 @@ function closeMemberCheckout(){
 }
 
 function showMemberPaymentFromHome(){
-  if(typeof hideTalentScreens==='function') hideTalentScreens();
-  memberPaymentFirstFlow = true;
-  memberPaymentPreconfirmed = false;
-  document.title='Movies × Brands — The Portal';
-  const home=document.getElementById('publicHomeView'); if(home) home.style.display='none';
-  const login=document.getElementById('loginScreen'); if(login) login.style.display='none';
-  const payment=document.getElementById('paymentScreen'); if(payment) payment.style.display='flex';
-  window.scrollTo(0,0);
+  // Redirect directly to ThriveCart — no internal screen
+  window.location.href = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
 }
 
 function completeMemberPayment(){
-  if(memberPaymentFirstFlow){
-    memberPaymentFirstFlow = false;
-    memberPaymentPreconfirmed = true;
-    document.getElementById('paymentScreen').style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'flex';
-    showRegister();
-    const sub=document.querySelector('#registerCard .subtitle');
-    if(sub) sub.textContent='Pago confirmado. Crea ahora tu cuenta y después completa tu perfil.';
-    const btn=document.querySelector('#registerCard .btn-gold');
-    if(btn) btn.textContent='Crear cuenta y continuar';
-    window.scrollTo(0,0);
-    return;
-  }
-  doRegister();
+  // All payment paths go through ThriveCart — no internal fake payment
+  window.location.href = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
 }
 
 /* ===== Seguridad: hash de contraseñas, anti-spam y anti-bot ===== */
@@ -7123,14 +7158,23 @@ function goToPayment(){
   if(regFormShownAt && (Date.now() - regFormShownAt) < 2500){ msg.textContent = 'No se pudo procesar la solicitud.'; msg.classList.add('err'); return; }
   if(selectionMembers.some(m => m.email === email)){ msg.textContent = 'Ya existe una cuenta con ese email.'; msg.classList.add('err'); return; }
 
-  if(memberPaymentPreconfirmed){
-    memberPaymentPreconfirmed = false;
-    doRegister();
-    return;
-  }
+  // memberPaymentPreconfirmed path removed — all payments go through ThriveCart
 
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('paymentScreen').style.display = 'flex';
+  // Save pending registration so we can complete it after ThriveCart payment
+  try {
+    localStorage.setItem('mxb_pending_member', JSON.stringify({
+      name, surname, phone, email, pass,
+      referrer: selectedReferrer ? selectedReferrer.brand : null,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+
+  // Redirect to ThriveCart — real payment page
+  const tcBase = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
+  const tcUrl = tcBase + '?contact[email]=' + encodeURIComponent(email)
+    + '&contact[first_name]=' + encodeURIComponent(name)
+    + '&contact[last_name]=' + encodeURIComponent(surname);
+  window.location.href = tcUrl;
 }
 
 async function doRegister(){
@@ -7287,6 +7331,27 @@ async function doLogin(){
     renderInstitutionProfileSearch();
     return;
   }
+  // Supabase real-member fallback
+  try {
+    const apiRes = await fetch('/api/member/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (apiRes.ok) {
+      const apiData = await apiRes.json();
+      loginAttempts = 0;
+      currentMember = apiData.member;
+      enterProfile();
+      return;
+    }
+    const apiErr = await apiRes.json().catch(() => ({}));
+    if (apiRes.status === 403) {
+      msg.textContent = apiErr.error || 'Cuenta pendiente de activación. Revisa tu correo.';
+      msg.classList.add('err'); return;
+    }
+  } catch { /* offline or server error — fall through to generic message */ }
+
   loginAttempts++;
   if(loginAttempts >= 5){ lockedUntil = Date.now() + 60000; }
   msg.textContent = 'Email o contraseña incorrectos.'; msg.classList.add('err');
@@ -7331,6 +7396,66 @@ function showPublicHome(){
   document.getElementById('publicHomeView').style.display = 'block';
   window.scrollTo(0,0);
 }
+
+/* ================= ThriveCart return handler ================= */
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('joined') === '1'){
+    // Clean URL
+    history.replaceState(null,'',window.location.pathname);
+    // Complete registration with pending data
+    const pending = (() => { try{ return JSON.parse(localStorage.getItem('mxb_pending_member')||'null'); }catch(e){ return null; } })();
+    function showPaymentThankYou(email){
+      document.getElementById('publicHomeView') && (document.getElementById('publicHomeView').style.display='none');
+      document.getElementById('loginScreen') && (document.getElementById('loginScreen').style.display='none');
+      let el = document.getElementById('mxbPaymentThankyou');
+      if(!el){
+        el = document.createElement('div');
+        el.id = 'mxbPaymentThankyou';
+        el.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070707;color:#f4efe5;font-family:Inter,Arial,sans-serif;text-align:center;padding:40px 20px;';
+        el.innerHTML = '<div style="max-width:520px;">'
+          + '<div style="font-size:11px;letter-spacing:.2em;color:#C9A227;font-weight:700;margin-bottom:18px;">MOVIES × BRANDS</div>'
+          + '<h1 style="font:400 clamp(28px,4vw,46px)/1.1 Fraunces,Georgia,serif;margin:0 0 20px;">Thank you — you\'re in.</h1>'
+          + '<p style="color:rgba(244,239,229,.65);font-size:14px;line-height:1.75;margin:0 0 32px;">'
+          + 'Your payment has been received. Our team will review your profile within 48 hours.<br>'
+          + 'Once approved, you\'ll receive an email with your login details so you can access the ecosystem.'
+          + '</p>'
+          + (email ? '<p style="font-size:12px;color:rgba(244,239,229,.4);">Confirmation sent to: ' + email + '</p>' : '')
+          + '<button onclick="document.getElementById(\'mxbPaymentThankyou\').remove();showPublicHome();" style="margin-top:24px;background:transparent;border:1px solid rgba(201,162,39,.5);color:#C9A227;font-size:11px;letter-spacing:.12em;font-weight:700;padding:12px 28px;border-radius:8px;cursor:pointer;">← Back to Portal</button>'
+          + '</div>';
+        document.body.appendChild(el);
+      }
+      el.style.display = 'flex';
+    }
+    if(pending && (Date.now() - pending.ts) < 3600000){
+      window._mxbPendingMember = pending;
+      localStorage.removeItem('mxb_pending_member');
+      // Populate the registration form fields silently, then create the account
+      try {
+        document.getElementById('regName').value = pending.name || '';
+        document.getElementById('regSurname').value = pending.surname || '';
+        document.getElementById('regPhone').value = pending.phone || '';
+        document.getElementById('regEmail').value = pending.email || '';
+        document.getElementById('regPass').value = pending.pass || '';
+        document.getElementById('regPassConfirm') && (document.getElementById('regPassConfirm').value = pending.pass || '');
+        window.regFormShownAt = 0; // bypass anti-spam timer — payment already confirmed by ThriveCart
+        doRegister();
+      } catch(e) { showPaymentThankYou(pending.email); }
+      // Notify admin via localStorage notification
+      try{
+        const ns = JSON.parse(localStorage.getItem('mxb_admin_notifications_v1')||'[]');
+        ns.unshift({ id:'notif_tc_'+Date.now(), type:'new_member_purchase', unread:true, pinned:true, priority:'high',
+          title:'💳 Nuevo pago ThriveCart · Membresía',
+          text: pending.name+' '+pending.surname+' ('+pending.email+') ha completado el pago. Pendiente de aprobación manual.',
+          member_email: pending.email, date: new Date().toLocaleDateString('es-ES'), created_at: new Date().toISOString()
+        });
+        localStorage.setItem('mxb_admin_notifications_v1', JSON.stringify(ns));
+      }catch(e){}
+    } else {
+      showPaymentThankYou('');
+    }
+  }
+})();
 
 /* ================= Navegación entre vistas del dashboard ================= */
 function showView(view){
@@ -8524,7 +8649,26 @@ function enterProfile(){
   document.getElementById('loginScreen').style.display = 'none';
 
   if(!m.approved){
+    document.getElementById('publicHomeView').style.display = 'none';
     document.getElementById('profileArea').style.display = 'none';
+
+    if(m.profileStatus === 'pending_review'){
+      const pa = document.getElementById('pendingArea');
+      pa.innerHTML = `
+        <div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:#08090b;">
+          <div style="max-width:480px;width:100%;text-align:center;">
+            <p style="color:#c9a94f;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:28px;">Movies × Brands</p>
+            <h1 style="color:#f5f1e8;font-size:26px;font-weight:700;margin-bottom:14px;line-height:1.3;">Bienvenido/a a Movies × Brands</h1>
+            <p style="color:#a0998a;font-size:15px;line-height:1.7;margin-bottom:20px;">El ecosistema que une cine, marcas, inteligencia artificial e impacto humano.</p>
+            <p style="color:#a0998a;font-size:14px;line-height:1.75;margin-bottom:40px;">Estamos revisando tu perfil. En un plazo máximo de 48 horas recibirás por correo la confirmación de tu acceso completo.</p>
+            <button onclick="doLogout()" style="padding:13px 28px;background:transparent;border:1px solid #353435;border-radius:8px;color:#f5f1e8;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:.02em;">Cerrar sesión</button>
+          </div>
+        </div>`;
+      pa.style.display = 'flex';
+      window.scrollTo(0,0);
+      return;
+    }
+
     document.getElementById('pendingArea').style.display = 'flex';
 
     // Prellenar por si ya había rellenado algo y vuelve a entrar
@@ -8540,12 +8684,6 @@ function enterProfile(){
       document.getElementById('pendingBrandWebsite').value = m.website || '';
     }
     if(m.photo) document.getElementById('pendingAvatarBox').innerHTML = '<img src="'+m.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-
-    const msg = document.getElementById('pendingMsg');
-    msg.className = 'msg';
-    if(m.profileStatus === 'pending_review'){
-      msg.textContent = '⏳ Tu perfil ya está enviado y en revisión — puedes seguir editándolo mientras tanto.'; msg.classList.add('ok');
-    }
 
     window.scrollTo(0,0);
     return;
@@ -9179,6 +9317,7 @@ function saveProfile(){
     currentMember.pendingEdits = edits;
     currentMember.profileReviewStatus = 'pending_edit_review';
     logMemberEditForAdmin(currentMember);
+    saveSelectionMembers();
     closeProfileEditForm();
     renderDashboardTop();
     renderBrandPartnerProfileMaster();
@@ -9186,6 +9325,7 @@ function saveProfile(){
   } else {
     // Primera vez — se guarda directamente, pendiente de la aprobación inicial de siempre.
     Object.assign(currentMember, edits);
+    saveSelectionMembers();
     renderBrandPartnerProfileMaster();
     alert('✓ Perfil guardado correctamente.');
   }
@@ -9250,6 +9390,7 @@ function renderBrandPartnerProfileMaster(){
 }
 
 function openProfileEditForm(){
+  if(!currentMember) return;
   renderBrandPartnerProfileMaster();
   document.getElementById('profileEditForm').style.display = 'block';
   syncUsernameEditState();
@@ -10120,7 +10261,8 @@ document.addEventListener('DOMContentLoaded', () => {
     galaAvailable:10,
     galaPrice:1500,
     galaSecondTicketPrice:750,
-    checkoutUrl:'',
+    checkoutUrl:'https://sales.sprintogrowth.com/official-gala-1-ticket/',
+    checkoutUrl2tickets:'https://sales.sprintogrowth.com/2-tickets-exclusive-gala-2027/',
     redCarpetPrice:'',
     vipPrice:'',
     images:{
@@ -10170,15 +10312,12 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('En este momento no hay disponibilidad suficiente para esta opción.');
       return;
     }
-    if(!s.checkoutUrl){
+    const baseUrl = qty===2 ? (s.checkoutUrl2tickets||s.checkoutUrl) : s.checkoutUrl;
+    if(!baseUrl){
       alert('El checkout todavía no está configurado. Contacta con el equipo de Movies × Brands para completar la reserva.');
       return;
     }
-    const total=qty===2?(Number(s.galaPrice)+Number(s.galaSecondTicketPrice)):Number(s.galaPrice);
-    const sep=s.checkoutUrl.includes('?')?'&':'?';
-    const returnUrl=location.origin+location.pathname+'?gala_purchase=success';
-    const url=s.checkoutUrl+sep+'qty='+qty+'&total='+encodeURIComponent(total)+'&return_url='+encodeURIComponent(returnUrl);
-    window.location.href=url;
+    window.location.href=baseUrl;
   };
   function renderPremiumExperiences(){
     const s=getSettings(), imgs=currentImages(), has=purchased();
@@ -10990,7 +11129,7 @@ function ps(){
  }).map(norm)
 }
 window.ps = ps; // expuesta para reutilizar en la Home pública (sección "Featured Power List") sin duplicar lógica
-function hide(){if(typeof window.resetMXBProfileSEO==='function')window.resetMXBProfileSEO();document.querySelectorAll('.sub-view').forEach(x=>x.style.display='none');['homeView','publicHomeView','moreView','messagesView','academyView','communityView','insightDetailView','memberPublicProfileView','premiumExperiencesView','brandPartnersView','fovView','hubView','authorityView','powerListView','powerListProfileView'].forEach(id=>{let e=document.getElementById(id);if(e)e.style.display='none'})}
+function hide(){if(typeof window.resetMXBProfileSEO==='function')window.resetMXBProfileSEO();document.querySelectorAll('.sub-view').forEach(x=>x.style.display='none');['homeView','publicHomeView','moreView','messagesView','academyView','communityView','insightDetailView','memberPublicProfileView','premiumExperiencesView','brandPartnersView','fovView','hubView','authorityView','powerListView','powerListProfileView'].forEach(id=>{let e=document.getElementById(id);if(e)e.style.display='none'});document.body.classList.remove('mxb-profile-open');document.body.classList.remove('mxb-panel-peek');}
 window.hide = hide; // expuesta globalmente: showPublicHome() y otros modulos fuera de este bloque la necesitan
 function edition(id){return EDITIONS.find(e=>e.id===id)}
 function yt(url){if(!url)return'';let id='';try{const u=new URL(url,location.href);if(u.hostname.includes('youtu.be'))id=u.pathname.replace('/','');else if(u.searchParams.get('v'))id=u.searchParams.get('v');else{const m=u.pathname.match(/\/embed\/([^/?]+)/)||u.pathname.match(/\/shorts\/([^/?]+)/);if(m)id=m[1]}}catch(e){const m=String(url).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/);if(m)id=m[1]}return id?'https://www.youtube.com/embed/'+encodeURIComponent(id):''}
@@ -11009,7 +11148,7 @@ window.cards = cards; // expuesta para reutilizar en la Home pública sin duplic
 window.plRender=()=>{const q=(document.getElementById('plSearch')?.value||'').toLowerCase(),ed=document.getElementById('plEdition')?.value||'';const a=ps().filter(p=>(!ed||p.edition===ed)&&(!q||JSON.stringify(p).toLowerCase().includes(q)));document.getElementById('plCount').textContent=a.length+' perfiles seleccionados';document.getElementById('plGrid').innerHTML=cards(a,false)};
 
 window.plProfile=s=>{
- const p=ps().find(x=>x.slug===s);if(!p)return;hide();document.getElementById('powerListProfileView').style.display='block';const e=edition(p.edition_category),embed=yt(p.youtube_url),year=p.year||2026;
+ const p=ps().find(x=>x.slug===s);if(!p)return;hide();document.getElementById('powerListProfileView').style.display='block';document.body.classList.add('mxb-profile-open');const e=edition(p.edition_category),embed=yt(p.youtube_url),year=p.year||2026;
  const publicUrl=(location.origin&&location.origin!=='null'?location.origin:'https://moviesxbrands.com')+'/portal/'+encodeURIComponent(p.slug);
  document.getElementById('plProfile').innerHTML=`<button class="plxp-back" onclick="${activeEdition?`plxReturnToEdition('${activeEdition}')`:'openPowerListView()'}">← Volver a Power List</button><section class="plxp-hero"><div class="plxp-photo"><img src="${p.photo||''}" alt="${esc(p.full_name)}"></div><div class="plxp-copy"><div class="plxp-kicker">${esc((e||{}).title||p.category||'POWER LIST')}</div><h1>${esc(p.full_name)}</h1><div class="plxp-role">${esc(p.job_title||'')}${p.organization?'<br>'+esc(p.organization):''}${p.country?'<br>'+esc(p.country):''}</div><div class="plxp-recognition">Selected for the Movies × Brands Power List ${year}</div>${p.member?'<div style="font-size:9px;color:#3f6b3d;font-weight:700;">✓ VERIFIED MEMBER OF MOVIES × BRANDS</div>':''}<div class="plxp-actions"><button onclick="plShareOpen('${p.slug}')">Share your recognition</button>${p.linkedin_url?`<a class="secondary" target="_blank" rel="noopener" href="${esc(p.linkedin_url)}">LinkedIn</a>`:''}${p.instagram_url?`<a class="secondary" target="_blank" rel="noopener" href="${esc(p.instagram_url)}">Instagram</a>`:''}${p.website_url?`<a class="secondary" target="_blank" rel="noopener" href="${esc(p.website_url)}">Website</a>`:''}</div></div></section>
  <div class="plxp-grid"><section class="plxp-panel"><h3>Why selected</h3><p>${esc(p.selection_reason||p.short_bio||'Selección editorial de The La Croisette.')}</p></section><section class="plxp-panel"><h3>Profile</h3><p>${esc(p.full_bio||p.short_bio||'')}</p></section>
@@ -11018,7 +11157,7 @@ window.plProfile=s=>{
  <section class="plxp-panel full"><h3>Public profile URL</h3><p style="word-break:break-all">${esc(publicUrl)}</p><p style="margin-top:5px;font-size:9.5px;color:rgba(23,21,18,.45)">Ruta preparada para backend público e indexable. El prototipo mantiene navegación por hash.</p></section></div>`;
  history.replaceState(null,'','#power-list/'+encodeURIComponent(p.slug));scrollTo(0,0)
 };
-window.plxReturnToEdition=id=>{hide();document.getElementById('powerListView').style.display='block';plxOpenEdition(id)};
+window.plxReturnToEdition=id=>{hide();document.getElementById('powerListView').style.display='block';plxOpenEdition(id);document.body.classList.remove('mxb-profile-open');document.body.classList.remove('mxb-panel-peek')};
 
 window.plShareOpen=s=>{const p=ps().find(x=>x.slug===s);if(!p)return;share=p;const m=document.getElementById('plShare');if(m)m.classList.add('open');if(typeof plShareDraw==='function')plShareDraw()};
 window.plShareClose=()=>{const e=document.getElementById('plShare');if(e)e.classList.remove('open')};
@@ -11437,6 +11576,7 @@ html.mxb-modal-open,html.mxb-modal-open body{overflow:hidden;}
 }
 </style>
 
+</div><!-- /profileArea -->
 
 <section id="mxbBrandPartnerModal" class="mxb-brand-modal" role="dialog" aria-modal="true" aria-labelledby="mxbBrandPartnerTitle">
   <div class="mxb-brand-modal-card">
@@ -11661,13 +11801,17 @@ html.mxb-modal-open,html.mxb-modal-open body{overflow:hidden;}
   });
 
   window.mxbOpenProfile=function(slug){
-    const profileArea=document.getElementById('profileArea');
-    if(profileArea) profileArea.style.display='block';
-    if(typeof window.plProfile==='function'){
-      window.plProfile(slug);
-      const profileView=document.getElementById('powerListProfileView');
-      if(profileView) profileView.style.display='block';
-      setTimeout(function(){ window.scrollTo(0,0); },0);
+    if(window.currentMember){
+      const profileArea=document.getElementById('profileArea');
+      if(profileArea) profileArea.style.display='block';
+      if(typeof window.plProfile==='function'){
+        window.plProfile(slug);
+        const profileView=document.getElementById('powerListProfileView');
+        if(profileView) profileView.style.display='block';
+        setTimeout(function(){ window.scrollTo(0,0); },0);
+      }
+    } else {
+      if(slug) window.location.href='/portal/'+slug;
     }
   };
 
@@ -11856,7 +12000,7 @@ html.mxb-modal-open,html.mxb-modal-open body{overflow:hidden;}
 
       <section class="ph-section ph-redcarpet-strip ph-cannes-legacy"><div class="ph-section-head"><div class="ph-eyebrow" style="color:var(--gold-deep)">Ya ocurrió · Primera edición</div><h2>CANNES 2026: DE LA VISIÓN A LA ALFOMBRA ROJA</h2><p style="margin-top:16px;">Una gala privada donde marcas, productores, talento y prensa internacional se encontraron — y entregamos los primeros reconocimientos en la Croisette.</p></div><div class="ph-cannes-video" style="max-width:490px;margin:28px auto 34px;"><div style="font-size:14px;font-weight:700;letter-spacing:.02em;margin-bottom:12px;">Cannes 2026 — Ver vídeo</div><div style="position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:16px;background:#000;box-shadow:0 18px 50px rgba(0,0,0,.18);"><iframe src="https://www.youtube.com/embed/Epqt8BK6USs?autoplay=1&mute=1&loop=1&playlist=Epqt8BK6USs&controls=1&rel=0&playsinline=1&origin=https%3A%2F%2Fmoviesxbrands.com&widget_referrer=https%3A%2F%2Fmoviesxbrands.com" title="Cannes 2026 — Ver vídeo" style="position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div></div><div class="ph-cannes-proof"><article><strong>80</strong><h3>Asistentes por invitación</h3><p>Marcas, productores, creativos y prensa internacional.</p></article><article><strong>01</strong><h3>Ganador + Finalistas</h3><p>Sepia Creativa, ganador del AI Storytelling Challenge, junto a las finalistas María Cárdenas y Victoria Deleyte.</p></article><article><strong>03</strong><h3>Boost Legacy Recognitions</h3><p>Mike Chan (European Wellness · Main Partner), Keith L. Craig y Aymar Celdrán.</p></article></div><div class="ph-cannes-gallery">${MXB_CANNES_2026_PHOTOS.map(p=>`<figure class="ph-cannes-shot"><img src="${p.url}" alt="${p.alt}" loading="lazy"><figcaption>${p.alt}</figcaption></figure>`).join('')}</div><div class="ph-section-cta ph-cannes-actions"><button class="ph-btn-gold" onclick="showMemberPaymentFromHome()">FORMA PARTE DE 2027 →</button></div></section>
 
-      <section class="ph-section ph-boost-legacy" id="boostLegacy"><div class="ph-boost-legacy-inner"><div class="ph-eyebrow">Boost Legacy</div><h2><span class="ph-boost-line ph-boost-line-gold">EL TALENTO ESTÁ EN TODAS PARTES.</span><span class="ph-boost-line ph-boost-line-silver">LAS OPORTUNIDADES, NO.</span></h2><p><strong>Impulsamos el futuro de jóvenes con talento a través de becas, formación y oportunidades, gracias al apoyo de quienes quieren dejar un legado.</strong></p><a class="ph-btn-gold" href="#" onclick="event.preventDefault(); (parent.openBoostLegacyPage?parent.openBoostLegacyPage.bind(parent):function(){location.href='legacy.html'})('es');" style="display:inline-block;text-decoration:none;">FORMA PARTE DE BOOST LEGACY →</a></div></section>
+      <section class="ph-section ph-boost-legacy" id="boostLegacy"><div class="ph-boost-legacy-inner"><div class="ph-eyebrow">Boost Legacy</div><h2><span class="ph-boost-line ph-boost-line-gold">EL TALENTO ESTÁ EN TODAS PARTES.</span><span class="ph-boost-line ph-boost-line-silver">LAS OPORTUNIDADES, NO.</span></h2><p><strong>Impulsamos el futuro de jóvenes con talento a través de becas, formación y oportunidades, gracias al apoyo de quienes quieren dejar un legado.</strong></p><a class="ph-btn-gold" href="#" onclick="event.preventDefault(); openBoostLegacy();" style="display:inline-block;text-decoration:none;">FORMA PARTE DE BOOST LEGACY →</a></div></section>
 
       <section class="ph-section ph-premium-light">
         <div class="ph-section-head">
@@ -11895,7 +12039,7 @@ html.mxb-modal-open,html.mxb-modal-open body{overflow:hidden;}
 
       <section class="ph-final-premium"><div class="ph-eyebrow">Movies × Brands</div><h2>ENTRA EN EL ECOSISTEMA</h2><p>Construye autoridad, descubre personas y conecta con oportunidades en la intersección entre cine, negocio, inteligencia artificial, marcas e impacto humano.</p><div class="ph-final-buttons"><button class="ph-btn-gold" onclick="showMemberPaymentFromHome()">ÚNETE A NOSOTROS</button><button class="ph-btn-outline-light" onclick="showLoginScreen()">INICIAR SESIÓN</button></div></section>
 
-      <footer class="ph-legal-footer"><div class="ph-legal-inner"><span>© ${new Date().getFullYear()} Movies × Brands · Wonder World Group</span><div class="ph-legal-links"><button type="button" onclick="openMXBPrivacyPolicy()">Política de Privacidad y Cookies</button><a href="mailto:soporte@moviesxbrands.com">soporte@moviesxbrands.com</a><button type="button" data-mxb-open="partnership" onclick="openMXBPartnershipForm()">Partnerships: cannes@moviesxbrands.com</button></div></div></footer>`;
+      <footer class="ph-legal-footer"><div class="ph-legal-inner"><span>© ${new Date().getFullYear()} Movies × Brands · Wonder World Group</span><div class="ph-legal-links"><button type="button" onclick="openMXBPrivacyPolicy()">Política de Privacidad y Cookies</button><a href="mailto:soporte@moviesxbrands.com">soporte@moviesxbrands.com</a><button type="button" data-mxb-open="partnership" onclick="openMXBPartnershipForm()">Partnerships: cannes@moviesxbrands.com</button></div></div><p style="margin-top:12px;font-size:10px;opacity:.4;line-height:1.6;max-width:780px;margin-left:auto;margin-right:auto;padding:0 16px;text-align:center;">The profiles shown on Movies × Brands may belong to members of our community, contributors, or figures selected editorially by our team. Their inclusion does not necessarily imply affiliation, representation, endorsement, or direct collaboration with Movies × Brands, unless expressly stated.</p></footer>`;
     setTimeout(window.mxbRenderDirectory,0);
     setTimeout(window.mxbLoadHeroVideo,0);
     setTimeout(window.mxbFitStageLines,0);
@@ -12121,7 +12265,7 @@ html.mxb-modal-open,html.mxb-modal-open body{overflow:hidden;}
   };
   window.plProfile=function(slug){
     const p=findMXBProfile(slug);if(!p){if(originalPlProfile)return originalPlProfile(slug);return;}
-    if(typeof hide==='function')hide();const view=document.getElementById('powerListProfileView');if(view)view.style.display='block';
+    if(typeof hide==='function')hide();const view=document.getElementById('powerListProfileView');if(view)view.style.display='block';document.body.classList.add('mxb-profile-open');
     window.scrollTo(0,0);
     const e=typeof edition==='function'?edition(p.edition_category):null;const publicUrl='https://moviesxbrands.com/portal/'+encodeURIComponent(p.slug);
     const areas=mxbProfileAreas(p),collabs=mxbProfileCollabs(p),country=E(p.country||p.territory||'Global');
@@ -12482,26 +12626,66 @@ window.addEventListener('popstate',()=>{const m=document.getElementById('mxbBoos
       <h2 id="mxbPrivacyTitle" style="font-size:32px;">Política de Privacidad y Cookies</h2>
     </div>
     <div class="mxb-privacy-body">
-      <p>3 Innovanet Solutions SL, sensible a las necesidades de los usuarios de Internet y consciente de la importancia de la estricta privacidad de la información personal que se nos confía, incluye esta declaración de privacidad para que estés informado sobre la política de tratamiento de los datos personales obtenidos de sus visitantes y usuarios.</p>
-      <p>Al utilizar este sitio, aceptas estas condiciones por el mero hecho de leer, visualizar o navegar por él. Si no las aceptas, debes abandonar el sitio sin hacer uso de él ni de su contenido, y sin acceder a las páginas enlazadas.</p>
-      <h3>Responsable del tratamiento de datos</h3>
-      <p>El titular del sitio y responsable del tratamiento de datos es <strong>3 Innovanet Solutions SL</strong>. Para contactar con nosotros puedes escribir a <a href="mailto:sprintogrowth@gmail.com">sprintogrowth@gmail.com</a> o por correo postal a Pau Claris 162, Barcelona.</p>
-      <h3>Finalidad del tratamiento de datos</h3>
-      <p>En nuestro sitio web existen secciones concretas donde puedes introducir tus datos para recibir información sobre actualizaciones y algunos de los programas que distribuimos. Te aseguramos que la información que nos facilites será tratada de forma completamente confidencial y no será cedida a terceros sin tu consentimiento previo, salvo obligación legal.</p>
-      
-      <h3>Perfiles públicos, selección editorial y relaciones profesionales</h3>
-      <p>Movies × Brands es una plataforma y ecosistema internacional independiente que desarrolla actividad editorial, profesional y de networking en conexión con diferentes industrias, mercados, eventos y escenarios globales, incluidos festivales y encuentros vinculados al cine, las marcas, la innovación y la cultura. La referencia a festivales, eventos, organizaciones, personalidades o terceros no implica, salvo indicación expresa, afiliación, patrocinio, representación, endorsement ni relación contractual con Movies × Brands.</p>
-      <p>Dentro del ecosistema pueden coexistir perfiles vinculados a relaciones profesionales, colaboraciones, participación o networking desarrollado directamente por Movies × Brands, junto con perfiles incorporados a iniciativas editoriales, selecciones profesionales o espacios de reconocimiento como Power List. Cada perfil responde a una naturaleza y nivel de vinculación distintos, que pueden variar según el contexto, la iniciativa concreta y el grado de participación de su titular.</p>
-      <p>La inclusión de una personalidad, profesional o figura de relevancia pública en una selección editorial, Power List o espacio equivalente responde a criterios editoriales propios de The La Croisette / Movies × Brands y puede apoyarse en información profesional o de carácter público legítimamente disponible. Dicha inclusión tiene una finalidad informativa, editorial y de reconocimiento profesional y, por sí sola, no implica necesariamente pertenencia activa, colaboración, endorsement, representación ni relación comercial con Movies × Brands.</p>
-      <p>Por otro lado, determinados perfiles pueden corresponder a personas, empresas u organizaciones que sí participan, colaboran, mantienen relaciones profesionales, forman parte de iniciativas concretas o interactúan dentro del networking real del ecosistema Movies × Brands. Cuando proceda, esa vinculación podrá reflejarse mediante elementos de verificación, estado, categoría, participación o información específica dentro de la plataforma.</p>
-      <p><strong>Power List:</strong> la inclusión en Power List constituye una selección editorial independiente y no implica, por sí sola, afiliación, representación, patrocinio, endorsement ni relación contractual entre la persona seleccionada y Movies × Brands, salvo que se indique expresamente lo contrario.</p>
+      <p style="font-size:11px;opacity:.55;margin-bottom:18px;">Last updated: September 23, 2026</p>
 
-      <h3>Perfiles editoriales y derechos de los interesados</h3>
-      <p>Cuando un perfil editorial incluya datos personales de carácter profesional o información relativa a una persona identificable, su tratamiento se realizará conforme a la normativa aplicable y a la base jurídica que corresponda. Las personas incluidas podrán solicitar la verificación o reclamación de su perfil, actualizar la información correspondiente, registrarse para gestionar su presencia dentro del ecosistema y ejercer, cuando proceda, sus derechos de acceso, rectificación, supresión, oposición, limitación u otros reconocidos por la normativa aplicable. También podrán solicitar la corrección o retirada de información cuando legalmente corresponda.</p>
-      <h3>Política de cookies</h3>
-      <p>Este sitio utiliza cookies propias y de terceros para mejorar la experiencia de navegación, analizar el tráfico y personalizar el contenido. Puedes configurar o desactivar las cookies en cualquier momento desde los ajustes de tu navegador. Al continuar navegando, aceptas el uso de cookies en los términos descritos en esta política.</p>
-      <h3>Contacto</h3>
-      <p>Para consultas generales y soporte: <a href="mailto:soporte@moviesxbrands.com">soporte@moviesxbrands.com</a>.<br>Para alianzas de marca y partnerships: <a href="mailto:cannes@moviesxbrands.com">cannes@moviesxbrands.com</a>.</p>
+      <h3>1. Introduction</h3>
+      <p>At BrainyAds LLC, we understand that trust is the foundation of every professional relationship. The personal information you share with us is valuable, and we treat it with the same care and rigor we apply to our programs and services.</p>
+      <p>This Privacy Policy explains, in clear and transparent terms, what personal data we collect when you visit <a href="https://moviesxbrands.com">https://moviesxbrands.com</a> (the "Website") or use our programs, resources and services, why we collect it, how we protect it, and what rights you have over it.</p>
+      <p>This Policy has been drafted in accordance with Regulation (EU) 2016/679 (GDPR), Spanish Organic Law 3/2018 (LOPDGDD), Spanish Law 34/2002 (LSSI-CE), and, where applicable, the CCPA/CPRA and other applicable United States privacy laws.</p>
+
+      <h3>2. Data Controller</h3>
+      <p><strong>BrainyAds LLC</strong><br>Registration Number: 990403109<br>Registered address: 2201 Menaul Blvd NW, Albuquerque, NM 87107, United States of America<br>Email: <a href="mailto:info@brainyads.net">info@brainyads.net</a></p>
+
+      <h3>3. Personal Data We Collect</h3>
+      <p><strong>Data you provide directly:</strong> Identification and contact data (name, email, phone, country); registration and membership data; billing and transaction data (card payments processed by our payment providers — we do not store full card numbers); professional data (company, job title, sector); and the content of any messages or support requests.</p>
+      <p><strong>Data collected automatically:</strong> IP address, browser type, device type, OS, pages visited, time on site, referring URLs — collected via cookies and similar technologies.</p>
+      <p><strong>Data from third parties:</strong> Where you access services through a corporate agreement, or interact with us via social media.</p>
+
+      <h3>4. Purposes and Legal Bases</h3>
+      <p>We process your personal data only when we have a valid legal basis under Article 6 GDPR. We do not use your data for automated decision-making that produces legal effects. Where processing is based on legitimate interest, you may object at any time.</p>
+
+      <h3>5. Mandatory and Optional Data</h3>
+      <p>Fields marked with an asterisk (*) in our forms are mandatory. Providing all other information is optional. You are responsible for ensuring data you provide is accurate and up to date.</p>
+
+      <h3>6. Data Retention</h3>
+      <p>Inquiries: up to 12 months after handling. Newsletter: until you unsubscribe. Members and customers: for the duration of the relationship and statutory periods thereafter (e.g. up to 6 years for accounting records under Spanish law). Cookies: as specified in our Cookie Policy. Data is securely deleted or anonymized once retention periods expire.</p>
+
+      <h3>7. Recipients of Your Data</h3>
+      <p>We do not sell or rent your personal data. We may share it with your organization (where you participate in a contracted program), public authorities where legally required, and professional advisors bound by confidentiality.</p>
+
+      <h3>8. International Data Transfers</h3>
+      <p>As BrainyAds LLC is established in the United States, your data may be transferred outside the EEA. We ensure appropriate safeguards are in place, such as Standard Contractual Clauses or the EU-U.S. Data Privacy Framework. Contact <a href="mailto:info@brainyads.net">info@brainyads.net</a> for more information.</p>
+
+      <h3>9. Your Rights</h3>
+      <p>You may exercise the following rights at any time, free of charge: Access · Rectification · Erasure · Restriction · Portability · Objection · Withdrawal of consent · Digital rights (LOPDGDD).</p>
+      <p>To exercise these rights, email <a href="mailto:info@brainyads.net">info@brainyads.net</a> with subject "Data Protection". We will respond within one month. If you believe your rights have not been respected, you may file a complaint with the Spanish Data Protection Agency (<a href="https://www.aepd.es" target="_blank">www.aepd.es</a>) or the supervisory authority of your EU country of residence.</p>
+
+      <h3>10. Additional Information for US Residents</h3>
+      <p>California and other US residents may have the right to: know what personal information we collect; request deletion or correction; opt out of "sale" or "sharing" for cross-context behavioral advertising (we do not sell your personal information); and not receive discriminatory treatment for exercising your rights. Contact <a href="mailto:info@brainyads.net">info@brainyads.net</a> to exercise these rights.</p>
+
+      <h3>11. Minors</h3>
+      <p>Our services are intended for adults. We do not knowingly collect data from individuals under 16 (or under 14 in Spain). In the United States, we do not knowingly collect personal information from children under 13 (COPPA). If you believe this has occurred, please contact us and we will delete it promptly.</p>
+
+      <h3>12. Security</h3>
+      <p>We apply appropriate technical and organizational measures including encrypted connections (SSL/TLS), access controls, and confidentiality commitments. No method of internet transmission is completely secure; we will notify the competent authority and, where required, you, if a breach occurs that is likely to result in risk to your rights.</p>
+
+      <h3>13. Commercial Communications</h3>
+      <p>We will only send commercial communications by email if you have expressly authorized it, or if you are an existing customer and the communications concern similar services. Every communication includes an unsubscribe option. You may also opt out by writing to <a href="mailto:info@brainyads.net">info@brainyads.net</a>.</p>
+
+      <h3>14. Third-Party Links and Social Media</h3>
+      <p>The Website may contain links to third-party websites and social media platforms. We are not responsible for their privacy practices. We recommend you review their policies before providing personal data.</p>
+
+      <h3>15. Cookies</h3>
+      <p>We use our own and third-party cookies to ensure the Website works properly, analyze usage and, with your consent, personalize content and advertising. Non-essential cookies are only installed after you give consent via our cookie banner.</p>
+
+      <h3>16. Editorial Profiles and Public Figures</h3>
+      <p>Movies × Brands is an independent international platform. Profiles on the platform may belong to members, collaborators, or figures selected editorially by our team. Inclusion in any editorial selection, Power List or equivalent space does not necessarily imply affiliation, representation, endorsement, or direct collaboration with Movies × Brands, unless expressly stated. Individuals may request profile correction or removal by contacting us.</p>
+
+      <h3>17. Changes to This Policy</h3>
+      <p>We may update this Privacy Policy to reflect legal, technical or business changes. Where changes are significant, we will notify you by email or through a clear notice on the Website.</p>
+
+      <h3>18. Contact</h3>
+      <p>BrainyAds LLC · 2201 Menaul Blvd NW, Albuquerque, NM 87107, USA<br>Email: <a href="mailto:info@brainyads.net">info@brainyads.net</a><br><br>For portal support: <a href="mailto:soporte@moviesxbrands.com">soporte@moviesxbrands.com</a><br>For brand partnerships: <a href="mailto:cannes@moviesxbrands.com">cannes@moviesxbrands.com</a></p>
     </div>
   </div>
 </section>
@@ -12805,6 +12989,158 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMXBPrivacyPolic
 
   const obs=new MutationObserver(()=>patchDom());
   obs.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+
+<style id="mxb-profile-sidebar-v1">
+/* Mobile only: hide sidebar + hamburger when a profile is open */
+@media(max-width:768px){
+  body.mxb-profile-open .app-sidebar{display:none!important;}
+  body.mxb-profile-open .app-main{flex:1!important;max-width:100%!important;}
+  body.mxb-profile-open .mob-hamburger{display:none!important;}
+  body.mxb-profile-open .mob-sidebar-overlay{display:none!important;}
+  /* PANEL toggle button — mobile only */
+  #mxbPanelToggle{
+    position:fixed;top:16px;left:12px;z-index:900;
+    background:#0B0B0B;border:1px solid rgba(201,162,39,.5);border-radius:8px;
+    padding:8px 10px;cursor:pointer;color:#C9A227;font-size:13px;line-height:1;
+    box-shadow:0 2px 12px rgba(0,0,0,.35);
+    align-items:center;gap:6px;
+  }
+  #mxbPanelToggle:hover{background:#1a1a1a;}
+  body.mxb-profile-open #mxbPanelToggle{display:flex;}
+  /* Peek: sidebar slides back as floating overlay */
+  body.mxb-profile-open.mxb-panel-peek .app-sidebar{
+    display:block!important;position:fixed!important;top:0!important;left:0!important;
+    z-index:800!important;height:100vh!important;overflow-y:auto!important;
+    box-shadow:4px 0 24px rgba(0,0,0,.4)!important;
+  }
+}
+/* Hide toggle on tablet/desktop */
+#mxbPanelToggle{display:none;}
+</style>
+
+<script>
+/* Task 02 fix: hoist public modals out of profileArea so they work when signed out */
+document.addEventListener('DOMContentLoaded', function() {
+  ['mxbBrandPartnerModal','mxbPrivacyModal','mxbPartnershipModal','mxbBoostLegacyModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  });
+});
+
+/* Task 07 fix: migrate stale gala checkout URLs in localStorage */
+(function(){
+  var KEY='mxb_premium_upgrade_settings_v1';
+  var OLD1='https://sales.sprintogrowth.com/1-ticket-global-boost-awards-official-gala/';
+  var OLD2='https://sales.sprintogrowth.com/global-boost-awards-official-gala-2-tickets/';
+  var NEW1='https://sales.sprintogrowth.com/official-gala-1-ticket/';
+  var NEW2='https://sales.sprintogrowth.com/2-tickets-exclusive-gala-2027/';
+  try {
+    var raw=localStorage.getItem(KEY);
+    if(!raw) return;
+    var s=JSON.parse(raw);
+    var changed=false;
+    if(s.checkoutUrl===OLD1){s.checkoutUrl=NEW1;changed=true;}
+    if(s.checkoutUrl2tickets===OLD2){s.checkoutUrl2tickets=NEW2;changed=true;}
+    if(changed) localStorage.setItem(KEY,JSON.stringify(s));
+  } catch(e){}
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script id="mxb-google-auth-v1">
+(function(){
+  'use strict';
+  var SUPA_URL='https://fbxxhsawwcygildgvdmm.supabase.co';
+  var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieHhoc2F3d2N5Z2lsZGd2ZG1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTczODYsImV4cCI6MjEwMTE5MzM4Nn0.jvFpUQpNIkSgiY_zIqOW3sKs5nyq9UBGN0-eePx5gWM';
+  var sb=null;
+  function getSB(){if(!sb&&window.supabase&&window.supabase.createClient){sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);}return sb;}
+
+  window.mxbGoogleAuth=function(mode){
+    var client=getSB();
+    if(!client){alert('Google sign-in no disponible en este momento.');return;}
+    var redirectTo=(location.origin||'https://portal.moviesxbrands.com')+'/home';
+    client.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo:redirectTo,queryParams:{prompt:'select_account'},scopes:'email profile'}
+    }).then(function(r){
+      if(r.error){
+        var msgId=mode==='login'?'loginMsg':'registerMsg';
+        var el=document.getElementById(msgId);
+        if(el){el.textContent='Error al conectar con Google. Inténtalo de nuevo.';el.className='msg err';}
+      }
+    });
+  };
+
+  function showMsg(id,text,isErr){
+    var el=document.getElementById(id);
+    if(!el)return;
+    el.textContent=text;
+    el.className='msg '+(isErr?'err':'ok');
+  }
+
+  function handleReturn(session){
+    var client=getSB();
+    if(!session||!session.user)return;
+    var email=(session.user.email||'').toLowerCase().trim();
+    var meta=session.user.user_metadata||{};
+    var fullName=meta.full_name||meta.name||'';
+    var parts=fullName.trim().split(/\s+/);
+    var firstName=parts[0]||'';
+    var lastName=parts.slice(1).join(' ')||'';
+
+    // Sign out from Supabase — portal uses localStorage session
+    if(client){client.auth.signOut().catch(function(){});}
+
+    // Try to find existing member
+    var members=window.selectionMembers||[];
+    var found=members.find(function(m){return (m.email||'').toLowerCase()===email;});
+
+    if(found){
+      window.currentMember=found;
+      if(typeof enterProfile==='function')enterProfile();
+      return;
+    }
+
+    // No member found → open register card pre-filled for Google user
+    var publicHome=document.getElementById('publicHomeView');
+    var loginScreen=document.getElementById('loginScreen');
+    if(publicHome)publicHome.style.display='none';
+    if(loginScreen){loginScreen.style.display='flex';}
+    if(typeof showRegister==='function')showRegister();
+
+    // Pre-fill fields
+    var nameEl=document.getElementById('regName');
+    var surnameEl=document.getElementById('regSurname');
+    var emailEl=document.getElementById('regEmail');
+    var passEl=document.getElementById('regPass');
+    var passConfEl=document.getElementById('regPassConfirm');
+
+    if(nameEl&&firstName)nameEl.value=firstName;
+    if(surnameEl&&lastName)surnameEl.value=lastName;
+    if(emailEl){emailEl.value=email;emailEl.setAttribute('readonly','');emailEl.style.opacity='.6';emailEl.style.cursor='not-allowed';}
+
+    // Auto-generate password (user will use Google to sign in going forward)
+    var rnd=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
+    if(passEl){passEl.value=rnd;var pf=passEl.closest('.field');if(pf)pf.style.display='none';}
+    if(passConfEl){passConfEl.value=rnd;var pcf=passConfEl.closest?passConfEl.closest('.field'):passConfEl.parentElement.parentElement;if(pcf&&pcf.classList.contains('field'))pcf.style.display='none';}
+
+    showMsg('registerMsg','✓ Email verificado con Google. Añade tu teléfono y continúa al pago.',false);
+  }
+
+  // On page load, check if returning from Google OAuth
+  window.addEventListener('load',function(){
+    var client=getSB();
+    if(!client)return;
+    // Give the portal's member data time to initialise
+    setTimeout(function(){
+      client.auth.getSession().then(function(r){
+        if(r.data&&r.data.session)handleReturn(r.data.session);
+      }).catch(function(){});
+    },400);
+  });
 })();
 </script>
 

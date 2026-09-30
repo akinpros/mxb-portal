@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activa tu cuenta — Movies × Brands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#c9a94f;
+    --bg:#08090b;
+    --panel:#141517;
+    --field:#202124;
+    --border:#353435;
+    --text:#f5f1e8;
+    --muted:#a0998a;
+    --danger:#c0392b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Inter',Helvetica,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:24px;
+  }
+  .logo{
+    color:var(--gold);font-size:13px;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;
+    text-decoration:none;margin-bottom:36px;display:block;text-align:center;
+  }
+  .card{
+    width:100%;max-width:440px;
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:14px;padding:36px 32px;
+  }
+  .card h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px;}
+  .card p.sub{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:28px;}
+  label{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+  .field{margin-bottom:18px;}
+  input{
+    width:100%;background:var(--field);border:1px solid var(--border);
+    border-radius:8px;padding:12px 14px;color:var(--text);
+    font-size:15px;font-family:'Inter',Helvetica,sans-serif;outline:none;
+    transition:border-color .18s;
+  }
+  input:focus{border-color:var(--gold);}
+  input[readonly]{opacity:.55;cursor:default;}
+  .btn{
+    width:100%;padding:14px;background:var(--gold);color:var(--bg);
+    border:none;border-radius:9px;font-size:15px;font-weight:700;
+    cursor:pointer;margin-top:8px;letter-spacing:.02em;transition:opacity .15s;
+  }
+  .btn:hover{opacity:.88;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .msg{font-size:13px;margin-top:16px;padding:12px 14px;border-radius:8px;display:none;}
+  .msg.err{display:block;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.35);color:#e07a70;}
+  .msg.ok{display:block;background:rgba(201,169,79,.1);border:1px solid rgba(201,169,79,.3);color:var(--gold);}
+  .pwd-wrap{position:relative;}
+  .pwd-wrap input{padding-right:42px;}
+  .pwd-toggle{
+    position:absolute;right:13px;top:50%;transform:translateY(-50%);
+    background:none;border:none;cursor:pointer;color:var(--muted);
+    font-size:15px;padding:2px;
+  }
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;}
+  #loadingState{
+    text-align:center;padding:40px 0;
+  }
+  #loadingState p{color:var(--muted);font-size:14px;margin-top:12px;}
+  .spinner{
+    width:28px;height:28px;border:3px solid var(--border);
+    border-top-color:var(--gold);border-radius:50%;
+    animation:spin .7s linear infinite;margin:0 auto;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #successState{text-align:center;padding:20px 0;display:none;}
+  #successState .check{font-size:48px;margin-bottom:16px;}
+  #successState h2{font-size:20px;font-weight:700;margin-bottom:10px;}
+  #successState p{font-size:14px;color:var(--muted);line-height:1.65;}
+  #formState{display:none;}
+  #errorState{text-align:center;padding:20px 0;display:none;}
+  #errorState .icon{font-size:40px;margin-bottom:14px;}
+  #errorState h2{font-size:18px;font-weight:700;margin-bottom:10px;}
+  #errorState p{font-size:14px;color:var(--muted);line-height:1.65;}
+</style>
+</head>
+<body>
+<a class="logo" href="/portal">Movies × Brands</a>
+<div class="card">
+  <!-- Loading -->
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <p>Verificando tu enlace…</p>
+  </div>
+
+  <!-- Error (invalid/expired token) -->
+  <div id="errorState">
+    <div class="icon">⚠️</div>
+    <h2 id="errorTitle">Enlace no válido</h2>
+    <p id="errorText">Este enlace de activación no es válido o ya fue utilizado.<br>Si necesitas ayuda, escríbenos a <a href="mailto:hola@moviesxbrands.com" style="color:var(--gold);">hola@moviesxbrands.com</a></p>
+  </div>
+
+  <!-- Activation form -->
+  <div id="formState">
+    <h1>Activa tu cuenta</h1>
+    <p class="sub">Elige una contraseña para acceder a tu espacio en Movies × Brands.</p>
+    <div class="field">
+      <label>Correo electrónico</label>
+      <input type="email" id="activateEmail" readonly>
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <div class="pwd-wrap">
+        <input type="password" id="activatePass" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        <button type="button" class="pwd-toggle" onclick="togglePwd('activatePass',this)" tabindex="-1">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Confirmar contraseña</label>
+      <div class="pwd-wrap">
+        <input type="password" id="activatePass2" placeholder="Repite la contraseña" autocomplete="new-password">
+        <button type="button" class="pwd-toggle" onclick="togglePwd('activatePass2',this)" tabindex="-1">👁</button>
+      </div>
+    </div>
+    <button class="btn" id="activateBtn" onclick="doActivate()">Activar mi cuenta</button>
+    <div class="msg" id="activateMsg"></div>
+  </div>
+
+  <!-- Success -->
+  <div id="successState">
+    <div class="check">✓</div>
+    <h2>¡Cuenta activada!</h2>
+    <p>Tu cuenta ya está lista. Serás redirigido/a al portal en un momento.</p>
+  </div>
+</div>
+
+<script>
+  const token = new URLSearchParams(location.search).get('token') || '';
+
+  function togglePwd(id, btn) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+    btn.textContent = el.type === 'password' ? '👁' : '🙈';
+  }
+
+  async function init() {
+    if (!token) {
+      showError('Enlace no válido', 'No se encontró ningún token de activación en este enlace.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/member/activate?token=' + encodeURIComponent(token));
+      const data = await res.json();
+      if (!res.ok) {
+        showError('Enlace expirado o inválido', data.error || 'Este enlace ya no es válido.');
+        return;
+      }
+      document.getElementById('activateEmail').value = data.email;
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('formState').style.display = 'block';
+    } catch {
+      showError('Error de conexión', 'No se pudo verificar el enlace. Inténtalo de nuevo.');
+    }
+  }
+
+  function showError(title, text) {
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorText').innerHTML = text;
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+  }
+
+  async function doActivate() {
+    const btn = document.getElementById('activateBtn');
+    const msg = document.getElementById('activateMsg');
+    msg.className = 'msg';
+    msg.style.display = 'none';
+
+    const pass = document.getElementById('activatePass').value;
+    const pass2 = document.getElementById('activatePass2').value;
+
+    if (pass.length < 8) {
+      msg.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+      msg.className = 'msg err';
+      return;
+    }
+    if (pass !== pass2) {
+      msg.textContent = 'Las contraseñas no coinciden.';
+      msg.className = 'msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Activando…';
+
+    try {
+      const res = await fetch('/api/member/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password: pass }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al activar la cuenta.';
+        msg.className = 'msg err';
+        btn.disabled = false;
+        btn.textContent = 'Activar mi cuenta';
+        return;
+      }
+      document.getElementById('formState').style.display = 'none';
+      document.getElementById('successState').style.display = 'block';
+      setTimeout(() => { window.location.href = '/portal'; }, 2200);
+    } catch {
+      msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
+      msg.className = 'msg err';
+      btn.disabled = false;
+      btn.textContent = 'Activar mi cuenta';
+    }
+  }
+
+  // Allow Enter key to submit
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('formState').style.display !== 'none') {
+      doActivate();
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>

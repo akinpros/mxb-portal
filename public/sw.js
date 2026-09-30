@@ -1,4 +1,4 @@
-const CACHE = 'mxb-portal-v2';
+const CACHE = 'mxb-portal-v21';
 const URLS = ['/home', '/portal/member'];
 
 self.addEventListener('install', e => {
@@ -20,17 +20,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (!URLS.includes(url.pathname)) return;
 
+  // Network-first: always fetch fresh HTML, fall back to cache only if offline
   e.respondWith(
-    caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(e.request);
-      // Fetch fresh in background and update cache
-      const fetchPromise = fetch(e.request).then(res => {
-        if (res.ok) cache.put(e.request, res.clone());
-        return res;
-      }).catch(() => null);
-
-      // Return cached immediately if available, otherwise wait for network
-      return cached || fetchPromise;
-    })
+    fetch(e.request).then(res => {
+      if (res.ok) {
+        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

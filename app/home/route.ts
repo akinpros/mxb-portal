@@ -23,24 +23,16 @@ img,video,iframe{max-width:100%!important}
 
 const PROFILE_URL_INJECT = `<script>
 (function(){
-  // After the iframe content loads, override mxbOpenProfile to navigate to real profile URL
-  var frame = document.getElementById('mxbFrame');
-  function hookFrame(){
-    try {
-      var iw = frame.contentWindow;
-      var orig = iw.mxbOpenProfile;
-      iw.mxbOpenProfile = function(slug){
-        // Navigate to the dedicated profile page
-        window.location.href = '/portal/' + slug;
-      };
-    } catch(e) {}
+  // Override mxbOpenProfile so public profile clicks navigate to the dedicated profile page
+  function patchProfileOpen(){
+    window.mxbOpenProfile = function(slug){
+      if(slug) window.location.href = '/portal/' + slug;
+    };
   }
-  if(frame){
-    frame.addEventListener('load', function(){ setTimeout(hookFrame, 200); });
-    // Also try immediately in case already loaded
-    setTimeout(hookFrame, 1000);
-    setTimeout(hookFrame, 3000);
-  }
+  // Patch immediately (for calls after DOMContentLoaded) and again after page scripts settle
+  patchProfileOpen();
+  document.addEventListener('DOMContentLoaded', patchProfileOpen);
+  window.addEventListener('load', patchProfileOpen);
 })();
 </script>`
 

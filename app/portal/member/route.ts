@@ -14,16 +14,81 @@ const SW_INJECT = `<script>if('serviceWorker' in navigator){navigator.serviceWor
 const MOBILE_INJECT = `<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 *{box-sizing:border-box!important}
-body{overflow-x:hidden!important}
+html,body{overflow-x:hidden!important;max-width:100vw!important}
 img,video,iframe{max-width:100%!important}
-@media(max-width:768px){
-  body{font-size:14px!important}
-  [style*="width:"]{max-width:100%!important}
-  table{width:100%!important;display:block!important;overflow-x:auto!important}
-  .sidebar,.nav-sidebar,[class*="sidebar"]{width:100%!important;position:relative!important}
-  [class*="modal"],[class*="panel"]{width:100vw!important;max-width:100vw!important;left:0!important;right:0!important}
+table{width:100%!important;display:block!important;overflow-x:auto!important}
+/* Hamburger button — hidden by default, shown on mobile */
+.mob-hamburger{
+  display:none;align-items:center;justify-content:center;
+  background:none;border:none;color:#171512;
+  cursor:pointer;padding:7px;border-radius:6px;margin-right:4px;flex-shrink:0;
 }
-</style>`
+/* Overlay backdrop */
+.mob-sidebar-overlay{
+  display:none;position:fixed;inset:68px 0 0 0;
+  background:rgba(0,0,0,.55);z-index:199;
+}
+.mob-sidebar-overlay.mob-open{display:block!important;}
+@media(max-width:960px){
+  .mob-hamburger{display:flex!important;}
+  .app-header{flex-wrap:nowrap!important;padding:0 14px!important;}
+  .app-header-search{display:none!important;}
+  .app-user-meta{display:none!important;}
+  /* Sidebar becomes an off-screen drawer */
+  .app-sidebar{
+    position:fixed!important;top:68px!important;left:0!important;bottom:0!important;
+    width:280px!important;min-height:unset!important;
+    transform:translateX(-100%)!important;
+    transition:transform .28s ease,box-shadow .28s ease!important;
+    z-index:200!important;overflow-y:auto!important;
+  }
+  .app-sidebar.mob-open{
+    transform:translateX(0)!important;
+    box-shadow:8px 0 50px rgba(0,0,0,.7)!important;
+  }
+  /* Main content fills full width */
+  .app-shell{display:block!important;}
+  .app-main{width:100%!important;min-width:0!important;}
+  /* Layout fixes */
+  .home-view,.sub-view{padding:20px 16px 60px!important;}
+  .home-hero-row,.dash-grid-2,.dash-grid-3{grid-template-columns:1fr!important;}
+  .kpi-row{grid-template-columns:1fr 1fr!important;}
+  .avatar-overlap-row{padding-left:12px!important;}
+  .avatar-box-lg{width:80px!important;height:80px!important;font-size:26px!important;}
+  .cover-photo{height:130px!important;}
+  .profile-header{margin-bottom:40px!important;}
+}
+@media(max-width:480px){
+  .kpi-row,.quick-actions-grid{grid-template-columns:1fr 1fr!important;}
+  .home-view,.sub-view{padding:16px 12px 56px!important;}
+}
+@media(min-width:961px){
+  .mob-hamburger{display:none!important;}
+  .mob-sidebar-overlay{display:none!important;}
+}
+</style>
+<script>
+function toggleMobileSidebar(){
+  var sb=document.getElementById('appSidebar');
+  var ov=document.getElementById('mobSidebarOverlay');
+  if(!sb)return;
+  var open=sb.classList.toggle('mob-open');
+  if(ov){open?ov.classList.add('mob-open'):ov.classList.remove('mob-open');}
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var sb=document.getElementById('appSidebar');
+  if(!sb)return;
+  sb.querySelectorAll('.sidebar-link').forEach(function(l){
+    l.addEventListener('click',function(){
+      if(window.innerWidth<=960){
+        sb.classList.remove('mob-open');
+        var ov=document.getElementById('mobSidebarOverlay');
+        if(ov)ov.classList.remove('mob-open');
+      }
+    });
+  });
+});
+</script>`
 
 const CONFIG_KEYS = [
   'announcement_banner',
@@ -291,7 +356,7 @@ window.MXB_CONFIG=${JSON.stringify(cfg)};
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
     },
   })
 }

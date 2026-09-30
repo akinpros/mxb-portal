@@ -1,0 +1,6 @@
+.next
+node_modules
+*.zip
+html/admin.html
+html/hospitality-unlocked.html
+html/redcarpet-unlocked.html

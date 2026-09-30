@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { verifyMemberSession, MEMBER_COOKIE } from '@/lib/member-session'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -25,31 +26,30 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Session inactivity timeout (30 minutes)
+  // Session inactivity timeout (30 minutes) for Supabase-auth users
   if (user) {
     const lastActive = request.cookies.get('mxb_last_active')?.value
     const now = Date.now()
     if (lastActive && now - parseInt(lastActive) > 30 * 60 * 1000) {
-      // Session expired — sign out
       await supabase.auth.signOut()
       const dest = pathname.startsWith('/portal') ? '/portal/login' : '/login'
       return NextResponse.redirect(new URL(dest, request.url))
     }
-    // Update last active timestamp
     supabaseResponse.cookies.set('mxb_last_active', String(now), { maxAge: 60 * 60, httpOnly: true, sameSite: 'lax' })
   }
 
-  // Always allow: API routes, static assets, auth callbacks, and self-contained HTML apps
-  if (
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/portal/member') ||
-    pathname.startsWith('/portal/institution') ||
-    pathname.startsWith('/portal/members') ||
-    pathname.startsWith('/portal/hospitality') ||
-    pathname.startsWith('/portal/redcarpet')
-  ) {
+  // Always allow: API routes, auth callbacks, static assets
+  if (pathname.startsWith('/api/') || pathname.startsWith('/auth/')) {
+    return supabaseResponse
+  }
+
+  // Guard member portal — requires valid mxb_ms session cookie
+  if (pathname.startsWith('/portal/member')) {
+    const token = request.cookies.get(MEMBER_COOKIE)?.value
+    const email = token ? await verifyMemberSession(token) : null
+    if (!email) {
+      return NextResponse.redirect(new URL('/portal/login', request.url))
+    }
     return supabaseResponse
   }
 
