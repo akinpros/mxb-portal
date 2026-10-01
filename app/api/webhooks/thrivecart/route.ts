@@ -12,7 +12,7 @@ function getAdmin() {
 }
 
 async function sendActivationEmail(email: string, name: string, token: string) {
-  const key = process.env.BREVO_API_KEY
+  const key = (process.env.BREVO_API_KEY || '').replace(/^﻿/, '')
   if (!key || key.startsWith('REPLACE')) {
     console.warn('[ThriveCart] Brevo key not set — skipping activation email for', email)
     return
