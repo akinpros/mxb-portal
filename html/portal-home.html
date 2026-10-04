@@ -7012,13 +7012,11 @@ function closeMemberCheckout(){
 }
 
 function showMemberPaymentFromHome(){
-  // Redirect directly to ThriveCart — no internal screen
-  window.location.href = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
+  showRegisterScreen();
 }
 
 function completeMemberPayment(){
-  // All payment paths go through ThriveCart — no internal fake payment
-  window.location.href = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
+  showRegisterScreen();
 }
 
 /* ===== Seguridad: hash de contraseñas, anti-spam y anti-bot ===== */
@@ -7137,7 +7135,7 @@ async function submitPasswordReset(){
   setTimeout(() => { location.hash=''; document.getElementById('resetPasswordCard').style.display='none'; showLoginCard(); }, 3200);
 }
 
-function goToPayment(){
+async function goToPayment(){
   const msg = document.getElementById('registerMsg');
   msg.className = 'msg';
   if(document.getElementById('hpFieldReg').value.trim() !== ''){
@@ -7156,20 +7154,40 @@ function goToPayment(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent = 'Introduce un email válido.'; msg.classList.add('err'); return; }
   if(isDisposableEmail(email)){ msg.textContent = 'No se admiten direcciones de email temporales.'; msg.classList.add('err'); return; }
   if(regFormShownAt && (Date.now() - regFormShownAt) < 2500){ msg.textContent = 'No se pudo procesar la solicitud.'; msg.classList.add('err'); return; }
-  if(selectionMembers.some(m => m.email === email)){ msg.textContent = 'Ya existe una cuenta con ese email.'; msg.classList.add('err'); return; }
 
-  // memberPaymentPreconfirmed path removed — all payments go through ThriveCart
-
-  // Save pending registration so we can complete it after ThriveCart payment
+  // Create account server-side first (pending_payment status)
+  msg.textContent = 'Creando tu cuenta…';
   try {
-    localStorage.setItem('mxb_pending_member', JSON.stringify({
-      name, surname, phone, email, pass,
-      referrer: selectedReferrer ? selectedReferrer.brand : null,
-      ts: Date.now()
-    }));
-  } catch(e) {}
+    const res = await fetch('/api/member/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, name: name + ' ' + surname })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      msg.textContent = data.error || 'No se pudo crear la cuenta.'; msg.classList.add('err'); return;
+    }
+    // If already approved, send them to login
+    if(data.status === 'approved'){
+      msg.textContent = 'Ya tienes una cuenta activa. Inicia sesión.'; msg.classList.add('ok');
+      setTimeout(() => showLoginCard(), 1800);
+      return;
+    }
+    // If already pending approval, show that screen
+    if(data.status === 'pending_approval'){
+      msg.textContent = 'Tu pago ya fue recibido y estamos revisando tu solicitud.'; msg.classList.add('ok');
+      setTimeout(() => { showLoginCard(); }, 1800);
+      return;
+    }
+  } catch(e) {
+    msg.textContent = 'Error de conexión. Inténtalo de nuevo.'; msg.classList.add('err'); return;
+  }
 
-  // Redirect to ThriveCart — real payment page
+  // Save email in sessionStorage so confirm-payment can find us on return
+  try { sessionStorage.setItem('mxb_reg_email', email); } catch(e) {}
+
+  // Redirect to ThriveCart
+  msg.textContent = 'Redirigiendo al pago…';
   const tcBase = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
   const tcUrl = tcBase + '?contact[email]=' + encodeURIComponent(email)
     + '&contact[first_name]=' + encodeURIComponent(name)
@@ -7427,30 +7445,22 @@ function showPublicHome(){
       }
       el.style.display = 'flex';
     }
-    if(pending && (Date.now() - pending.ts) < 3600000){
-      window._mxbPendingMember = pending;
+    // Get email from sessionStorage (set by goToPayment) or fallback to params
+    const regEmail = (() => { try{ return sessionStorage.getItem('mxb_reg_email') || ''; }catch(e){ return ''; } })();
+    const emailToConfirm = regEmail || params.get('contact[email]') || (pending && pending.email) || '';
+    if(emailToConfirm){
+      // Call confirm-payment API to move member to pending_approval
+      fetch('/api/member/confirm-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToConfirm })
+      }).catch(() => {});
+      try{ sessionStorage.removeItem('mxb_reg_email'); }catch(e){}
+      try{ localStorage.removeItem('mxb_pending_member'); }catch(e){}
+      showPaymentThankYou(emailToConfirm);
+    } else if(pending && (Date.now() - pending.ts) < 3600000){
       localStorage.removeItem('mxb_pending_member');
-      // Populate the registration form fields silently, then create the account
-      try {
-        document.getElementById('regName').value = pending.name || '';
-        document.getElementById('regSurname').value = pending.surname || '';
-        document.getElementById('regPhone').value = pending.phone || '';
-        document.getElementById('regEmail').value = pending.email || '';
-        document.getElementById('regPass').value = pending.pass || '';
-        document.getElementById('regPassConfirm') && (document.getElementById('regPassConfirm').value = pending.pass || '');
-        window.regFormShownAt = 0; // bypass anti-spam timer — payment already confirmed by ThriveCart
-        doRegister();
-      } catch(e) { showPaymentThankYou(pending.email); }
-      // Notify admin via localStorage notification
-      try{
-        const ns = JSON.parse(localStorage.getItem('mxb_admin_notifications_v1')||'[]');
-        ns.unshift({ id:'notif_tc_'+Date.now(), type:'new_member_purchase', unread:true, pinned:true, priority:'high',
-          title:'💳 Nuevo pago ThriveCart · Membresía',
-          text: pending.name+' '+pending.surname+' ('+pending.email+') ha completado el pago. Pendiente de aprobación manual.',
-          member_email: pending.email, date: new Date().toLocaleDateString('es-ES'), created_at: new Date().toISOString()
-        });
-        localStorage.setItem('mxb_admin_notifications_v1', JSON.stringify(ns));
-      }catch(e){}
+      showPaymentThankYou(pending.email);
     } else {
       showPaymentThankYou('');
     }
@@ -8652,15 +8662,33 @@ function enterProfile(){
     document.getElementById('publicHomeView').style.display = 'none';
     document.getElementById('profileArea').style.display = 'none';
 
-    if(m.profileStatus === 'pending_review'){
+    if(m.profileStatus === 'pending_payment' || m.profile_status === 'pending_payment'){
       const pa = document.getElementById('pendingArea');
       pa.innerHTML = `
         <div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:#08090b;">
           <div style="max-width:480px;width:100%;text-align:center;">
             <p style="color:#c9a94f;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:28px;">Movies × Brands</p>
-            <h1 style="color:#f5f1e8;font-size:26px;font-weight:700;margin-bottom:14px;line-height:1.3;">Bienvenido/a a Movies × Brands</h1>
+            <h1 style="color:#f5f1e8;font-size:26px;font-weight:700;margin-bottom:14px;line-height:1.3;">Completa tu membresía</h1>
+            <p style="color:#a0998a;font-size:15px;line-height:1.7;margin-bottom:20px;">Tu cuenta está creada. Solo falta completar el pago para activar tu acceso.</p>
+            <a href="https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/?contact[email]=${encodeURIComponent(m.email||m.contactName||'')}" style="display:inline-block;padding:15px 32px;background:#c9a94f;color:#08090b;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px;letter-spacing:.02em;margin-bottom:16px;">Completar mi membresía →</a>
+            <br>
+            <button onclick="doLogout()" style="padding:13px 28px;background:transparent;border:1px solid #353435;border-radius:8px;color:#f5f1e8;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:.02em;margin-top:8px;">Cerrar sesión</button>
+          </div>
+        </div>`;
+      pa.style.display = 'flex';
+      window.scrollTo(0,0);
+      return;
+    }
+
+    if(m.profileStatus === 'pending_approval' || m.profile_status === 'pending_approval' || m.profileStatus === 'pending_review'){
+      const pa = document.getElementById('pendingArea');
+      pa.innerHTML = `
+        <div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:#08090b;">
+          <div style="max-width:480px;width:100%;text-align:center;">
+            <p style="color:#c9a94f;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:28px;">Movies × Brands</p>
+            <h1 style="color:#f5f1e8;font-size:26px;font-weight:700;margin-bottom:14px;line-height:1.3;">Solicitud en revisión</h1>
             <p style="color:#a0998a;font-size:15px;line-height:1.7;margin-bottom:20px;">El ecosistema que une cine, marcas, inteligencia artificial e impacto humano.</p>
-            <p style="color:#a0998a;font-size:14px;line-height:1.75;margin-bottom:40px;">Estamos revisando tu perfil. En un plazo máximo de 48 horas recibirás por correo la confirmación de tu acceso completo.</p>
+            <p style="color:#a0998a;font-size:14px;line-height:1.75;margin-bottom:40px;">Tu pago ha sido confirmado. Estamos revisando tu solicitud. En un plazo máximo de 48 horas recibirás por correo la confirmación de tu acceso completo.</p>
             <button onclick="doLogout()" style="padding:13px 28px;background:transparent;border:1px solid #353435;border-radius:8px;color:#f5f1e8;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:.02em;">Cerrar sesión</button>
           </div>
         </div>`;
