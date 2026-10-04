@@ -40,15 +40,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Admin notification
-  await admin.from('mxb_admin_notifications').insert({
-    type: 'new_member_purchase',
-    unread: true,
-    priority: 'high',
-    title: `Nuevo pago — ${email}`,
-    text: `Membresía confirmada vía ThriveCart. Pendiente de aprobación.`,
-    date: new Date().toISOString().split('T')[0],
-    created_at: new Date().toISOString(),
-  }).catch(() => {})
+  try {
+    await admin.from('mxb_admin_notifications').insert({
+      type: 'new_member_purchase',
+      unread: true,
+      priority: 'high',
+      title: `Nuevo pago — ${email}`,
+      text: `Membresía confirmada vía ThriveCart. Pendiente de aprobación.`,
+      date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+    })
+  } catch { /* non-critical */ }
 
   return NextResponse.json({ ok: true, status: 'pending_approval' })
 }
