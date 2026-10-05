@@ -10335,6 +10335,12 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPremiumExperiences();
   };
   window.purchaseGalaTickets=function(){
+    // Only approved members can purchase tickets
+    if(!currentMember || !currentMember.approved){
+      alert('Debes ser miembro activo para comprar entradas. Por favor inicia sesión o completa tu membresía.');
+      showLoginScreen();
+      return;
+    }
     const s=getSettings();
     if(!s.galaEnabled || Number(s.galaAvailable)<qty){
       alert('En este momento no hay disponibilidad suficiente para esta opción.');
@@ -10345,7 +10351,12 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('El checkout todavía no está configurado. Contacta con el equipo de Movies × Brands para completar la reserva.');
       return;
     }
-    window.location.href=baseUrl;
+    const email = currentMember.email || '';
+    const name = currentMember.displayName || currentMember.contactName || '';
+    const url = baseUrl + (baseUrl.includes('?') ? '&' : '?')
+      + 'contact[email]=' + encodeURIComponent(email)
+      + '&contact[first_name]=' + encodeURIComponent(name);
+    window.location.href=url;
   };
   function renderPremiumExperiences(){
     const s=getSettings(), imgs=currentImages(), has=purchased();
