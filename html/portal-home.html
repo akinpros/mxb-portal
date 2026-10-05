@@ -4252,7 +4252,6 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="auth-divider">o continúa con email</div>
     <div class="field"><label>Nombre</label><input type="text" id="regName" placeholder="Nombre"></div>
     <div class="field"><label>Apellidos</label><input type="text" id="regSurname" placeholder="Apellidos"></div>
-    <div class="field"><label>Teléfono móvil</label><input type="tel" id="regPhone" placeholder="+34 600 000 000"></div>
     <div class="field"><label>Email</label><input type="email" id="regEmail" placeholder="tu@email.com"></div>
     <div class="field"><label>Contraseña</label>
       <div style="position:relative;">
@@ -7143,12 +7142,11 @@ async function goToPayment(){
   }
   const name = document.getElementById('regName').value.trim();
   const surname = document.getElementById('regSurname').value.trim();
-  const phone = document.getElementById('regPhone').value.trim();
   const email = document.getElementById('regEmail').value.trim().toLowerCase();
   const pass = document.getElementById('regPass').value;
   const passConfirm = document.getElementById('regPassConfirm').value;
 
-  if(!name || !surname || !phone || !email || !pass){ msg.textContent = 'Todos los campos son obligatorios.'; msg.classList.add('err'); return; }
+  if(!name || !surname || !email || !pass){ msg.textContent = 'Todos los campos son obligatorios.'; msg.classList.add('err'); return; }
   if(pass !== passConfirm){ msg.textContent = 'Las contraseñas no coinciden.'; msg.classList.add('err'); return; }
   if(pass.length < 6){ msg.textContent = 'La contraseña debe tener al menos 6 caracteres.'; msg.classList.add('err'); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent = 'Introduce un email válido.'; msg.classList.add('err'); return; }
@@ -7198,13 +7196,12 @@ async function goToPayment(){
 async function doRegister(){
   const name = document.getElementById('regName').value.trim();
   const surname = document.getElementById('regSurname').value.trim();
-  const phone = document.getElementById('regPhone').value.trim();
   const email = document.getElementById('regEmail').value.trim().toLowerCase();
   const pass = document.getElementById('regPass').value;
   const passwordHash = await mxbHash(pass);
 
   const newMember = {
-    contactName: name, surname, brand: '', website: '', phone, email, passwordHash,
+    contactName: name, surname, brand: '', website: '', phone: '', email, passwordHash,
     photo: '', displayName: '', categories: [], title: '', bioShort: '', bioLong: '',
     editions: {cannes: false, berlinale: false},
     trailerSubmitted: false, trailerLink: '', synopsis: '',
