@@ -7186,11 +7186,7 @@ async function goToPayment(){
 
   // Redirect to ThriveCart
   msg.textContent = 'Redirigiendo al pago…';
-  const tcBase = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
-  const tcUrl = tcBase + '?passthrough[email]=' + encodeURIComponent(email)
-    + '&passthrough[first_name]=' + encodeURIComponent(name)
-    + '&passthrough[last_name]=' + encodeURIComponent(surname);
-  window.location.href = tcUrl;
+  window.location.href = 'https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/';
 }
 
 async function doRegister(){
@@ -8667,7 +8663,7 @@ function enterProfile(){
             <p style="color:#c9a94f;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:28px;">Movies × Brands</p>
             <h1 style="color:#f5f1e8;font-size:26px;font-weight:700;margin-bottom:14px;line-height:1.3;">Completa tu membresía</h1>
             <p style="color:#a0998a;font-size:15px;line-height:1.7;margin-bottom:20px;">Tu cuenta está creada. Solo falta completar el pago para activar tu acceso.</p>
-            <a href="https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/?passthrough[email]=${encodeURIComponent(m.email||m.contactName||'')}" style="display:inline-block;padding:15px 32px;background:#c9a94f;color:#08090b;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px;letter-spacing:.02em;margin-bottom:16px;">Completar mi membresía →</a>
+            <a href="https://sales.sprintogrowth.com/join-the-ecosystem-moviesxbrands/" style="display:inline-block;padding:15px 32px;background:#c9a94f;color:#08090b;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px;letter-spacing:.02em;margin-bottom:16px;">Completar mi membresía →</a>
             <br>
             <button onclick="doLogout()" style="padding:13px 28px;background:transparent;border:1px solid #353435;border-radius:8px;color:#f5f1e8;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:.02em;margin-top:8px;">Cerrar sesión</button>
           </div>
@@ -10350,10 +10346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const email = currentMember.email || '';
     const name = currentMember.displayName || currentMember.contactName || '';
-    const url = baseUrl + (baseUrl.includes('?') ? '&' : '?')
-      + 'passthrough[email]=' + encodeURIComponent(email)
-      + '&passthrough[first_name]=' + encodeURIComponent(name);
-    window.location.href=url;
+    window.location.href=baseUrl;
   };
   function renderPremiumExperiences(){
     const s=getSettings(), imgs=currentImages(), has=purchased();
